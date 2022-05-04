@@ -15,3 +15,5 @@ Project is configured through `config.py`.
 
 
 ## More info
+
+Some info
