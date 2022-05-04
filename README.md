@@ -12,3 +12,6 @@ This project is intended to be helpful in relationship between business and peop
 ## configuration
 
 Project is configured through `config.py`.
+
+
+## More info
