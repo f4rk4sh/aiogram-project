@@ -1,8 +1,9 @@
-from aiogram import types
+from aiogram.types import Message
+from aiogram.dispatcher.filters import Command
 from loader import dp
 
 
-@dp.message_handler(text='/start')
-async def command_start(message: types.Message):
-    await message.answer(f'hello {message.from_user.full_name}! \n'
-                         f'your id: {message.from_user.id}')
+@dp.message_handler(Command('start'))
+async def command_start(message: Message):
+    await message.answer('Glad to see you!\n'
+                         'Choose an action 👇')
