@@ -1,5 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
+# test keyboard
+
 kb_menu = ReplyKeyboardMarkup(
     keyboard=[
         [
