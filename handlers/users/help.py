@@ -1,6 +1,7 @@
 from aiogram.types import Message
 from aiogram.dispatcher.filters import Command
 from loader import dp
+from utils.db_api.models import Master
 
 
 @dp.message_handler(Command('help'))
