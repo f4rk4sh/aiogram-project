@@ -7,6 +7,7 @@ load_dotenv()
 TOKEN = str(os.getenv('TOKEN'))
 
 ADMINS = [int(admin_id) for admin_id in os.getenv('ADMINS').split(',')]
+MASTERS = [int(master_id) for master_id in os.getenv('MASTERS').split(',')]
 
 PG_HOST = str(os.getenv('PG_HOST'))
 PG_USER = str(os.getenv('PG_USER'))
