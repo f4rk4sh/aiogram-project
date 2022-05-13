@@ -281,3 +281,5 @@ cython_debug/
 pyvenv.cfg
 pip-selfcheck.json
 
+# Test
+test_time.py
