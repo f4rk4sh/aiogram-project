@@ -5,10 +5,11 @@ class Master(db.Model):
     __tablename__ = 'master'
 
     id = db.Column(db.Integer, primary_key=True)
-    chat_id = db.Column(db.Integer, unique=True)
+    chat_id = db.Column(db.BigInteger, unique=True)
     name = db.Column(db.String(100))
     phone = db.Column(db.String(13), unique=True)
     info = db.Column(db.String(200))
+    photo_id = db.Column(db.String(200))
 
     def __repr__(self):
         return f'<Master {self.id}>'
@@ -18,7 +19,7 @@ class Customer(db.Model):
     __tablename__ = 'customer'
 
     id = db.Column(db.Integer, primary_key=True)
-    chat_id = db.Column(db.Integer, unique=True)
+    chat_id = db.Column(db.BigInteger, unique=True)
     name = db.Column(db.String(100))
     phone = db.Column(db.String(13), unique=True)
 

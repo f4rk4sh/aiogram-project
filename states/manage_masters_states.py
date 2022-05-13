@@ -7,3 +7,7 @@ class AddMaster(StatesGroup):
     phone = State()
     info = State()
 
+
+class DeleteMaster(StatesGroup):
+    select = State()
+    confirm = State()

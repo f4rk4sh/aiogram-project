@@ -7,41 +7,49 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from keyboards.default import kb_recipients, kb_admin_commands
 from keyboards.inline import kb_inform_confirm
 from loader import bot, dp
-from states import Inform
+from states import SendNotification
 from utils.db_api.models import Customer, Master
 
 
-@dp.message_handler(text='Inform')
-async def set_recipients(message: Message):
+@dp.message_handler(text=['Send notification', '/inform'], state='*')
+async def set_recipients(message: Message, state: FSMContext = None):
     await message.answer('Select recipients', reply_markup=kb_recipients)
-    await Inform.recipients.set()
+    if state is not None:
+        await state.finish()
+    await SendNotification.recipients.set()
 
 
-@dp.message_handler(text=['Inform masters', 'Inform customers', 'Inform both masters and customers'], state=Inform.recipients)
+@dp.message_handler(text=['Inform masters',
+                          'Inform customers',
+                          'Inform both masters and customers'],
+                    state=SendNotification.recipients)
 async def set_notification(message: Message, state: FSMContext):
     await state.update_data(recipients=message.text)
     await message.answer('Enter the text of the notification', reply_markup=ReplyKeyboardRemove())
-    await Inform.notification.set()
+    await SendNotification.notification.set()
 
 
-@dp.message_handler(state=Inform.notification)
+@dp.message_handler(state=SendNotification.notification)
 async def check_notification(message: Message, state: FSMContext):
     await state.update_data(notification=message.text)
-    await message.answer('Your notification is:\n\n'
-                         f'<em><b>"{message.text}"</b></em>\n\n'
-                         'Send this notification?', reply_markup=kb_inform_confirm)
-    await Inform.confirm.set()
+    await message.answer(text='Your notification is:\n\n'
+                              f'<em><b>"{message.text}"</b></em>\n\n'
+                              'Send this notification?',
+                         reply_markup=kb_inform_confirm)
+    await SendNotification.confirm.set()
 
 
-@dp.callback_query_handler(text_contains='change', state=Inform.confirm)
+@dp.callback_query_handler(text_contains='change', state=SendNotification.confirm)
 async def change_notification(call: CallbackQuery):
+    await call.answer(cache_time=10)
     await call.message.edit_reply_markup()
     await call.message.answer('Please, re-enter the text of the notification')
-    await Inform.notification.set()
+    await SendNotification.notification.set()
 
 
-@dp.callback_query_handler(text_contains='confirm', state=Inform.confirm)
+@dp.callback_query_handler(text_contains='confirm', state=SendNotification.confirm)
 async def confirm_notification(call: CallbackQuery, state: FSMContext):
+    await call.answer(cache_time=10)
     data = await state.get_data()
     notification = data.get('notification')
     recipients = data.get('recipients')
@@ -55,9 +63,12 @@ async def confirm_notification(call: CallbackQuery, state: FSMContext):
         recipients = (masters + customers)
     for recipient in recipients:
         try:
-            await bot.send_message(chat_id=recipient.chat_id, text=notification)
+            await bot.send_message(chat_id=recipient.chat_id,
+                                   text='<b>Notification from administrator:</b>\n\n'
+                                        f'<em>"{notification}"</em>\n\n'
+                                        'Wish you a good day!')
             await sleep(0.3)
         except Exception:
             logging.info(f'Notification has not been sent to {recipient.name}, chat id: {recipient.chat_id}')
     await call.message.answer('Notification has been successfully sent', reply_markup=kb_admin_commands)
-    await state.reset_state()
+    await state.finish()
