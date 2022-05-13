@@ -11,9 +11,11 @@ from states import SendNotification
 from utils.db_api.models import Customer, Master
 
 
-@dp.message_handler(text=['Send notification', '/inform'])
-async def set_recipients(message: Message):
+@dp.message_handler(text=['Send notification', '/inform'], state='*')
+async def set_recipients(message: Message, state: FSMContext = None):
     await message.answer('Select recipients', reply_markup=kb_recipients)
+    if state is not None:
+        await state.finish()
     await SendNotification.recipients.set()
 
 
@@ -61,7 +63,10 @@ async def confirm_notification(call: CallbackQuery, state: FSMContext):
         recipients = (masters + customers)
     for recipient in recipients:
         try:
-            await bot.send_message(chat_id=recipient.chat_id, text=notification)
+            await bot.send_message(chat_id=recipient.chat_id,
+                                   text='<b>Notification from administrator:</b>\n\n'
+                                        f'<em>"{notification}"</em>\n\n'
+                                        'Wish you a good day!')
             await sleep(0.3)
         except Exception:
             logging.info(f'Notification has not been sent to {recipient.name}, chat id: {recipient.chat_id}')

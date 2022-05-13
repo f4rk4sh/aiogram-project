@@ -38,7 +38,7 @@ async def menu(message: Message, state: FSMContext = None):
 
 
 @dp.message_handler(Command('help'), state='*')
-async def menu(message: Message, state: FSMContext = None):
+async def help(message: Message, state: FSMContext = None):
     if message.from_user.id in ADMINS:
         await message.answer(text='<b>Available commands</b>\n\n'
                                   '<b>Send notifications:</b>\n\n'
