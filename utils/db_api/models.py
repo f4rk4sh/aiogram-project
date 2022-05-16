@@ -37,7 +37,18 @@ class Timeslot(db.Model):
     time = db.Column(db.Time)
     is_free = db.Column(db.Boolean, default=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customer.id', ondelete='CASCADE'))
-    master_id = db.Column(db.Integer, db.ForeignKey('master.id', ondelete='CASCADE'))
+    master_id = db.Column(db.Integer, db.ForeignKey('master.id', ondelete='SET NULL'))
 
     def __repr__(self):
         return f'<Timeslot {self.id}>'
+
+
+class PortfolioPhoto(db.Model):
+    __tablename__ = 'portfoliophoto'
+
+    id = db.Column(db.Integer, primary_key=True)
+    photo_id = db.Column(db.String(200))
+    master_id = db.Column(db.Integer, db.ForeignKey('master.id', ondelete='CASCADE'))
+
+    def __repr__(self):
+        return f'<Portfolio photo {self.id}>'

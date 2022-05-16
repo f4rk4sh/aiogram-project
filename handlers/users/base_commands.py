@@ -25,20 +25,20 @@ async def command_start(message: Message, state: FSMContext = None):
 
 
 @dp.message_handler(Command('menu'), state='*')
-async def menu(message: Message, state: FSMContext = None):
+async def command_menu(message: Message, state: FSMContext = None):
     text = 'Main menu:'
     if message.from_user.id in ADMINS:
         await message.answer(text=text, reply_markup=kb_admin_commands)
     elif await Master.query.where(Master.chat_id == message.from_user.id).gino.one_or_none():
         await message.answer(text=text, reply_markup=kb_master_commands)
     else:
-        await message.answer(text=text, reply_markup=masters)
+        await message.answer(text=text, reply_markup=kb_masters)
     if state is not None:
         await state.finish()
 
 
 @dp.message_handler(Command('help'), state='*')
-async def help(message: Message, state: FSMContext = None):
+async def command_help(message: Message, state: FSMContext = None):
     if message.from_user.id in ADMINS:
         await message.answer(text='<b>Available commands</b>\n\n'
                                   '<b>Send notifications:</b>\n\n'
@@ -60,6 +60,6 @@ async def help(message: Message, state: FSMContext = None):
                              reply_markup=kb_master_commands)
     else:
         # need to be added
-        await message.answer(text='HELP INFO FOR CUSTOMERS', reply_markup=masters)
+        await message.answer(text='HELP INFO FOR CUSTOMERS', reply_markup=kb_masters)
     if state is not None:
         await state.finish()

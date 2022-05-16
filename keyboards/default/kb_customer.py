@@ -17,6 +17,12 @@ kb_masters = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="List of our masters"),
         ],
+        [
+            KeyboardButton(text="My visits"),
+        ],
+        [
+            KeyboardButton(text="Contacts"),
+        ],
     ],
     resize_keyboard=True
 )

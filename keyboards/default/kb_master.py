@@ -15,10 +15,13 @@ kb_master_commands = ReplyKeyboardMarkup(
 kb_master_profile = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="Update profile info"),
+            KeyboardButton(text="Upload portfolio photo"),
         ],
         [
             KeyboardButton(text="Upload profile photo"),
+        ],
+        [
+            KeyboardButton(text="Update profile info"),
         ],
     ],
     resize_keyboard=True,
