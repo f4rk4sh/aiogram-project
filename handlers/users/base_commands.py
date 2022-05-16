@@ -3,7 +3,7 @@ from aiogram.dispatcher.filters import Command
 from aiogram.types import Message
 
 from data.config import ADMINS
-from keyboards.default import kb_admin_commands, kb_master_commands, masters
+from keyboards.default import kb_admin_commands, kb_master_commands, kb_masters
 from loader import dp
 from utils.db_api.models import Master
 
@@ -19,7 +19,7 @@ async def command_start(message: Message, state: FSMContext = None):
     else:
         await message.answer('Glad to see you!\n'
                              'This bot belongs to Yarik and Dima shop \n'
-                             'Please, check out our professional masters 👇 \n', reply_markup=masters)
+                             'Please, check out our professional masters 👇 \n', reply_markup=kb_masters)
     if state is not None:
         await state.finish()
 
@@ -32,7 +32,7 @@ async def command_menu(message: Message, state: FSMContext = None):
     elif await Master.query.where(Master.chat_id == message.from_user.id).gino.one_or_none():
         await message.answer(text=text, reply_markup=kb_master_commands)
     else:
-        await message.answer(text=text, reply_markup=masters)
+        await message.answer(text=text, reply_markup=kb_masters)
     if state is not None:
         await state.finish()
 
@@ -60,6 +60,6 @@ async def command_help(message: Message, state: FSMContext = None):
                              reply_markup=kb_master_commands)
     else:
         # need to be added
-        await message.answer(text='HELP INFO FOR CUSTOMERS', reply_markup=masters)
+        await message.answer(text='HELP INFO FOR CUSTOMERS', reply_markup=kb_masters)
     if state is not None:
         await state.finish()

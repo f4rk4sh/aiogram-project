@@ -3,7 +3,7 @@ from datetime import datetime
 
 from aiogram.types import Message
 
-from keyboards.default import masters
+from keyboards.default import kb_masters
 from loader import dp
 from utils.db_api.models import Timeslot, Master, Customer
 
@@ -31,8 +31,8 @@ async def customer_visits(message: Message):
             text += upcoming_visits
         elif len(previous_visits) > 23:
             text += previous_visits
-        await message.answer(text=text, reply_markup=masters)
+        await message.answer(text=text, reply_markup=kb_masters)
     else:
         await message.answer(text='No visits yet\n'
                                   'Press "List of masters" to choose master',
-                             reply_markup=masters)
+                             reply_markup=kb_masters)
