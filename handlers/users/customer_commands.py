@@ -1,52 +1,53 @@
 import logging
+from datetime import date, datetime
 
-from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.utils.callback_data import CallbackData
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import (CallbackQuery, InlineKeyboardButton,
+                           InlineKeyboardMarkup, Message, ReplyKeyboardRemove)
+from aiogram.utils.callback_data import CallbackData
+
+from filters import date_filters as df
+from filters import get_dates, update_dates
+from keyboards.default import kb_confirm_booking, kb_master_info, kb_masters
+from keyboards.inline import kb_time_slots
 from loader import dp
-from keyboards.inline import master_choice, time_slots  # , booking_days
-from keyboards.default import master_info, confirm_booking, masters
-from filters import date_filters as df, get_dates, update_dates
-from datetime import datetime, date
-
-
-class ChosenMaster(StatesGroup):
-    waiting_for_choosing_master = State()
-    waiting_for_choosing_booking_or_portfolio = State()
-    waiting_for_choosing_date = State()
-    waiting_for_choosing_time = State()
-    waiting_for_confirmation = State()
+from states import ChosenMaster
+from utils.db_api.models import Master
 
 
 @dp.message_handler(text="List of our masters")
 async def list_of_masters(message: Message):
-    await message.answer("Here are our best masters",
-                         reply_markup=master_choice)
+    masters = await Master.query.gino.all()
+    kb_master_list = InlineKeyboardMarkup()
+    for master in masters:
+        kb_master_list.add(InlineKeyboardButton(text=master.name, callback_data=master.id))
     await ChosenMaster.waiting_for_choosing_master.set()
+    await message.answer("Here are our best masters", reply_markup=kb_master_list)
 
 
-@dp.callback_query_handler(text_contains="Master", state=ChosenMaster.waiting_for_choosing_master)
+@dp.callback_query_handler(state=ChosenMaster.waiting_for_choosing_master)
 async def chosen_master(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=10)
-    await state.update_data(master=call.data.split(':')[1])
-    await ChosenMaster.next()
-    await call.message.answer(f"You have chosen {call.data.split(':')[1]}.\n"
+    await state.update_data(master_id=int(call.data))
+    master = await Master.query.where(Master.id == int(call.data)).gino.first()
+    await ChosenMaster.waiting_for_choosing_booking_or_portfolio.set()
+    await call.message.answer(f"You have chosen {master.name}.\n"
                               f"Here is his profile.\n"
                               f"Please take a look on the masters best works by pressing the 'Portfolio' button.\n"
                               f"If you want to book this Master, please, press 'Book master' button.",
-                              reply_markup=master_info)
+                              reply_markup=kb_master_info)
 
 
-@dp.message_handler(text="Book master", state=ChosenMaster.waiting_for_choosing_booking_or_portfolio)
+@dp.message_handler(text=["Book master", '/book_master'], state=ChosenMaster.waiting_for_choosing_booking_or_portfolio)
 async def book_master(message: Message, state: FSMContext):
-    cm = await state.get_data()
+    data = await state.get_data()
     day = datetime.now().isoweekday()
     dates = get_dates(day)
     days_keyboard = get_days_keyboard(day, dates)
+    master = await Master.query.where(Master.id == data['master_id']).gino.first()
     await state.update_data(dates=dates)
-    await ChosenMaster.next()
-    await message.answer(f"You have decided to book {cm['master']}.\n"
+    await ChosenMaster.waiting_for_choosing_date.set()
+    await message.answer(f"You have decided to book {master.name}.\n"
                          f"Please choose the day!",
                          reply_markup=days_keyboard)
 
@@ -54,13 +55,14 @@ async def book_master(message: Message, state: FSMContext):
 @dp.callback_query_handler(text_contains="day", state=ChosenMaster.waiting_for_choosing_date)
 async def book_day(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=10)
-    cm = await state.get_data()
+    data = await state.get_data()
     await state.update_data(chosen_day=call.data.split(':')[1])
-    await ChosenMaster.next()
+    master = await Master.query.where(Master.id == data['master_id']).gino.first()
+    await ChosenMaster.waiting_for_choosing_time.set()
     await call.message.answer(f"You are trying to view available slots "
-                              f"on {call.data.split(':')[1]} for {cm['master']}\n"
+                              f"on {call.data.split(':')[1]} for {master.name}\n"
                               f"Please, select the available one!",
-                              reply_markup=time_slots)
+                              reply_markup=kb_time_slots)
 
 
 @dp.callback_query_handler(text_contains="week", state=ChosenMaster.waiting_for_choosing_date)
@@ -69,7 +71,9 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     dates = cm['dates']
     today = str(datetime.now().strftime("%d.%m"))
     first_day_in_dates = int(dates[0].split('.')[0])
-    if int(today.split('.')[0]) > first_day_in_dates and call.data.split(':')[1] == "Previous week":
+    if call.data.split(':')[1] == "Previous week" and datetime.now() > datetime(year=datetime.now().year,
+                                                                                month=int(dates[0].split('.')[1]),
+                                                                                day=int(dates[0].split('.')[0])):
         await call.answer(text="You can't navigate to the past", show_alert=True)
     elif call.data.split(':')[1] == "Previous week":
         if int(today.split('.')[0]) + 7 > first_day_in_dates:
@@ -91,11 +95,12 @@ async def book_day(call: CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(text_contains="m", state=ChosenMaster.waiting_for_choosing_time)
 async def book_time(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=10)
-    cm = await state.get_data()
-    await ChosenMaster.next()
-    await call.message.answer(f"You are trying to book {cm['master']} on {cm['chosen_day']} {call.data.split(':')[1]}\n"
+    data = await state.get_data()
+    master = await Master.query.where(Master.id == data['master_id']).gino.first()
+    await ChosenMaster.waiting_for_confirmation.set()
+    await call.message.answer(f"You are trying to book {master.name} on {data['chosen_day']} {call.data.split(':')[1]}\n"
                               f"Press the 'Confirm booking' button",
-                              reply_markup=confirm_booking)
+                              reply_markup=kb_confirm_booking)
 
 
 @dp.message_handler(text="Confirm booking", state=ChosenMaster.waiting_for_confirmation)
@@ -109,7 +114,7 @@ async def phone_verification(message: Message, state: FSMContext):
         await message.answer(f"Wrong number. Try again")
     else:
         cm = await state.get_data()
-        await message.answer(f"Done. {cm['master']}", reply_markup=masters)
+        await message.answer(f"Done. {cm['master']}", reply_markup=kb_masters)
         await state.finish()
 
 
