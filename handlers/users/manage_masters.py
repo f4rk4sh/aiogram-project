@@ -49,7 +49,7 @@ async def set_phone(message: Message, state: FSMContext):
 
 @dp.message_handler(state=AddMaster.phone)
 async def set_phone(message: Message, state: FSMContext):
-    if re.findall(r'\+?\d{12}', message.text):
+    if re.findall(r'\+380\d{12}', message.text):
         await state.update_data(phone=message.text)
         await message.answer('Enter master\'s info')
         await AddMaster.info.set()

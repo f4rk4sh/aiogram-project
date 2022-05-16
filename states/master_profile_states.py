@@ -7,3 +7,7 @@ class UpdateProfileInfo(StatesGroup):
 
 class UploadProfilePhoto(StatesGroup):
     photo = State()
+
+
+class UploadPortfolioPhoto(StatesGroup):
+    photo = State()

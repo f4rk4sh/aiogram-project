@@ -3,8 +3,8 @@ from aiogram.types import Message, ReplyKeyboardRemove
 
 from keyboards.default import kb_master_commands, kb_master_profile
 from loader import dp
-from states import UpdateProfileInfo, UploadProfilePhoto
-from utils.db_api.models import Master
+from states import UpdateProfileInfo, UploadProfilePhoto, UploadPortfolioPhoto
+from utils.db_api.models import Master, PortfolioPhoto
 
 
 @dp.message_handler(text=['My profile', '/profile'], state='*')
@@ -55,4 +55,20 @@ async def upload_photo(message: Message, state: FSMContext):
     master = await Master.query.where(Master.chat_id == message.from_user.id).gino.first()
     await master.update(photo_id=message.photo[-1].file_id).apply()
     await message.answer('Profile photo has been successfully uploaded', reply_markup=kb_master_commands)
+    await state.finish()
+
+
+@dp.message_handler(text=['Upload portfolio photo', '/upload_portfolio'], state='*')
+async def set_portfolio_photo(message: Message, state: FSMContext = None):
+    await message.answer('Send your photo', reply_markup=ReplyKeyboardRemove())
+    if state is not None:
+        await state.finish()
+    await UploadPortfolioPhoto.photo.set()
+
+
+@dp.message_handler(content_types=['photo'], state=UploadPortfolioPhoto.photo)
+async def upload_portfolio_photo(message: Message, state: FSMContext):
+    master = await Master.query.where(Master.chat_id == message.from_user.id).gino.first()
+    await PortfolioPhoto.create(master_id=master.id, photo_id=message.photo[-1].file_id)
+    await message.answer('Photo has been successfully added to your portfolio', reply_markup=kb_master_commands)
     await state.finish()

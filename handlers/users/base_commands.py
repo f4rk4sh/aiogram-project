@@ -25,7 +25,7 @@ async def command_start(message: Message, state: FSMContext = None):
 
 
 @dp.message_handler(Command('menu'), state='*')
-async def menu(message: Message, state: FSMContext = None):
+async def command_menu(message: Message, state: FSMContext = None):
     text = 'Main menu:'
     if message.from_user.id in ADMINS:
         await message.answer(text=text, reply_markup=kb_admin_commands)
@@ -38,7 +38,7 @@ async def menu(message: Message, state: FSMContext = None):
 
 
 @dp.message_handler(Command('help'), state='*')
-async def help(message: Message, state: FSMContext = None):
+async def command_help(message: Message, state: FSMContext = None):
     if message.from_user.id in ADMINS:
         await message.answer(text='<b>Available commands</b>\n\n'
                                   '<b>Send notifications:</b>\n\n'
