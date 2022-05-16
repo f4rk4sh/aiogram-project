@@ -3,7 +3,7 @@ from aiogram.utils.callback_data import CallbackData
 
 master_callback = CallbackData("booking_slot", "time_slot")
 
-time_slots = InlineKeyboardMarkup(
+kb_time_slots = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(text="10:00am - 11:00am", callback_data=master_callback.new(time_slot="since_10am"))

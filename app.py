@@ -12,7 +12,7 @@ from utils.db_api.models import Master, Customer, Timeslot
 
 async def on_startup(dispatcher):
     await create_db()
-    await on_startup_notify(dispatcher)
+    # await on_startup_notify(dispatcher)
     await set_default_commands(dispatcher)
 
     # uncomment to fulfill database
