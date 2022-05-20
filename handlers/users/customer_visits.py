@@ -1,6 +1,6 @@
 from datetime import datetime
 
-
+from aiogram.dispatcher import FSMContext
 from aiogram.types import Message
 
 from keyboards.default import kb_masters
@@ -8,8 +8,8 @@ from loader import dp
 from utils.db_api.models import Timeslot, Master, Customer
 
 
-@dp.message_handler(text=['My visits', '/visits'])
-async def customer_visits(message: Message):
+@dp.message_handler(text=['My visits', '/visits'], state='*')
+async def customer_visits(message: Message, state: FSMContext = None):
     customer = await Customer.query.where(Customer.chat_id == message.from_user.id).gino.one_or_none()
     if customer:
         visits = await Timeslot.query.where(Timeslot.customer_id == customer.id).gino.all()
@@ -33,6 +33,7 @@ async def customer_visits(message: Message):
             text += previous_visits
         await message.answer(text=text, reply_markup=kb_masters)
     else:
-        await message.answer(text='No visits yet\n'
-                                  'Press "List of masters" to choose master',
+        await message.answer(text='Unfortunately, you have no visits yet\n\n',
                              reply_markup=kb_masters)
+    if state:
+        await state.finish()
