@@ -58,7 +58,7 @@ async def upload_photo(message: Message, state: FSMContext):
     await state.finish()
 
 
-@dp.message_handler(text=['Upload portfolio photo', '/upload_portfolio'], state='*')
+@dp.message_handler(text=['Upload portfolio photo', '/upload_portfolio_photo'], state='*')
 async def set_portfolio_photo(message: Message, state: FSMContext = None):
     await message.answer('Send your photo', reply_markup=ReplyKeyboardRemove())
     if state is not None:

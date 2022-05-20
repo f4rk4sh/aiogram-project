@@ -1,6 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 kb_master_info = ReplyKeyboardMarkup(
+    one_time_keyboard=True,
     keyboard=[
         [
             KeyboardButton(text="Portfolio"),
@@ -13,6 +14,7 @@ kb_master_info = ReplyKeyboardMarkup(
 )
 
 kb_masters = ReplyKeyboardMarkup(
+    one_time_keyboard=True,
     keyboard=[
         [
             KeyboardButton(text="List of our masters"),
