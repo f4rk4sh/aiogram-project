@@ -35,3 +35,12 @@ kb_confirm_booking = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
+
+kb_request_contact = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="Send contact", request_contact=True)
+        ],
+    ],
+    resize_keyboard=True
+)

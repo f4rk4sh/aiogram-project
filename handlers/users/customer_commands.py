@@ -1,5 +1,7 @@
 import logging
-from datetime import date, datetime
+from datetime import date, time, datetime, timedelta
+import re
+from sqlalchemy import and_
 
 from aiogram.dispatcher import FSMContext
 from aiogram.types import (CallbackQuery, InlineKeyboardButton,
@@ -8,11 +10,11 @@ from aiogram.utils.callback_data import CallbackData
 
 from filters import date_filters as df
 from filters import get_dates, update_dates
-from keyboards.default import kb_confirm_booking, kb_master_info, kb_masters
+from keyboards.default import kb_confirm_booking, kb_master_info, kb_masters, kb_request_contact
 from keyboards.inline import kb_time_slots
 from loader import dp
 from states import ChosenMaster
-from utils.db_api.models import Master
+from utils.db_api.models import Master, Customer, Timeslot
 
 
 @dp.message_handler(text="List of our masters")
@@ -56,13 +58,25 @@ async def book_master(message: Message, state: FSMContext):
 async def book_day(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=10)
     data = await state.get_data()
+    chosen_date = call.data.split(' ')
+    month = chosen_date[1].split('.')[1]
+    day = chosen_date[1].split('.')[0]
+    time_slot = InlineKeyboardMarkup()
+    for time_inc in date_span(start=datetime(2022, int(month), int(day), 10),
+                              end=datetime(2022, int(month), int(day), 19),
+                              delta=timedelta(hours=1)):
+        if await Timeslot.query.where(((Timeslot.date == time_inc.date()) & (Timeslot.time == time_inc.time()) & (Timeslot.master_id == data['master_id']))).gino.one_or_none():
+            time_slot.add(InlineKeyboardButton(text=f'❌ Since {time_inc.strftime("%H:%M")} ❌', callback_data="booked"))
+        else:
+            time_slot.add(InlineKeyboardButton(text=f'Since {time_inc.strftime("%H:%M")}', callback_data=time_inc.hour))
+
     await state.update_data(chosen_day=call.data.split(':')[1])
     master = await Master.query.where(Master.id == data['master_id']).gino.first()
     await ChosenMaster.waiting_for_choosing_time.set()
     await call.message.answer(f"You are trying to view available slots "
                               f"on {call.data.split(':')[1]} for {master.name}\n"
                               f"Please, select the available one!",
-                              reply_markup=kb_time_slots)
+                              reply_markup=time_slot)
 
 
 @dp.callback_query_handler(text_contains="week", state=ChosenMaster.waiting_for_choosing_date)
@@ -92,30 +106,57 @@ async def book_day(call: CallbackQuery, state: FSMContext):
         await call.message.edit_reply_markup(reply_markup=keyboard)
 
 
-@dp.callback_query_handler(text_contains="m", state=ChosenMaster.waiting_for_choosing_time)
+@dp.callback_query_handler(state=ChosenMaster.waiting_for_choosing_time)
 async def book_time(call: CallbackQuery, state: FSMContext):
-    await call.answer(cache_time=10)
-    data = await state.get_data()
-    master = await Master.query.where(Master.id == data['master_id']).gino.first()
-    await ChosenMaster.waiting_for_confirmation.set()
-    await call.message.answer(f"You are trying to book {master.name} on {data['chosen_day']} {call.data.split(':')[1]}\n"
-                              f"Press the 'Confirm booking' button",
-                              reply_markup=kb_confirm_booking)
+    if call.data == "booked":
+        await call.answer(text="The timeslot is already booked", show_alert=True)
+    else:
+        await call.answer(cache_time=1)
+        data = await state.get_data()
+        master = await Master.query.where(Master.id == data['master_id']).gino.first()
+        chosen_date = data['chosen_day'].split(' ')[1]
+        chosen_time = call.data
+        await state.update_data(selected_date=chosen_date, selected_time=int(chosen_time))
+        await ChosenMaster.waiting_for_confirmation.set()
+        await call.message.answer(f"You are trying to book {master.name} on {data['chosen_day']} at {call.data}\n"
+                                  f"Press the 'Confirm booking' button",
+                                  reply_markup=kb_confirm_booking)
 
 
 @dp.message_handler(text="Confirm booking", state=ChosenMaster.waiting_for_confirmation)
 async def book_confirmation(message: Message, state: FSMContext):
-    await message.answer(f"Please enter your phone number without +380", reply_markup=ReplyKeyboardRemove())
+    await message.answer(f"Please send us your phone number", reply_markup=kb_request_contact)
 
 
-@dp.message_handler(state=ChosenMaster.waiting_for_confirmation)
+@dp.message_handler(content_types=['contact'], state=ChosenMaster.waiting_for_confirmation)
 async def phone_verification(message: Message, state: FSMContext):
-    if len(message.text) != 9 or message.text.startswith(("+", "0")) or not message.text.isnumeric():
-        await message.answer(f"Wrong number. Try again")
+    # if len(message.text) != 9 or message.text.startswith(("+", "0")) or not message.text.isnumeric():
+    #     await message.answer(f"Wrong number. Try again")
+    # else:
+    data = await state.get_data()
+    chat_id = message.chat.id
+    name = message.from_user.full_name
+    phone = f'+{message.contact.phone_number}'
+    customer = await Customer.query.where(Customer.phone == phone).gino.one_or_none()
+    if not customer:
+        await Customer.create(chat_id=chat_id, name=name, phone=phone)
     else:
-        cm = await state.get_data()
-        await message.answer(f"Done. {cm['master']}", reply_markup=kb_masters)
-        await state.finish()
+        if customer.chat_id is None:
+            await customer.update(chat_id=message.from_user.id)
+    chosen_date = date(year=datetime.now().year,
+                       month=int(data['selected_date'].split('.')[1]),
+                       day=int(data['selected_date'].split('.')[0]))
+    chosen_time = time(hour=data['selected_time'],
+                       minute=0,
+                       second=0)
+    customer_id = await Customer.select('id').where(Customer.chat_id == chat_id).gino.scalar()
+    master_id = data['master_id']
+    await Timeslot.create(date=chosen_date,
+                          time=chosen_time,
+                          is_free=False,
+                          customer_id=customer_id, master_id=master_id)
+    await message.answer(f"Done!", reply_markup=kb_masters)
+    await state.finish()
 
 
 def get_days_keyboard(day, dates):
@@ -136,3 +177,9 @@ def get_days_keyboard(day, dates):
     booking_days = InlineKeyboardMarkup(inline_keyboard=days_kb)
     return booking_days
 
+
+def date_span(start, end, delta):
+    current_date = start
+    while current_date <= end:
+        yield current_date
+        current_date += delta
