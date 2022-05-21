@@ -13,23 +13,23 @@ from utils.db_api.models import Customer, Master
 
 @dp.message_handler(text=['Send notification', '/inform'], state='*')
 async def set_recipients(message: Message, state: FSMContext = None):
-    await message.answer('Select recipients', reply_markup=kb_recipients)
     if state is not None:
         await state.finish()
+    await message.answer('Select recipients', reply_markup=kb_recipients)
     await SendNotification.recipients.set()
 
 
-@dp.message_handler(text=['Inform masters',
-                          'Inform customers',
-                          'Inform both masters and customers'],
+@dp.message_handler(text=['Inform masters', 'Inform customers', 'Inform both masters and customers'],
                     state=SendNotification.recipients)
 async def set_notification(message: Message, state: FSMContext):
     await state.update_data(recipients=message.text)
-    await message.answer('Enter the text of the notification', reply_markup=ReplyKeyboardRemove())
+    await message.answer(text='Enter the text of the notification\n\n'
+                              '<em>HINT: can not be a command</em>',
+                         reply_markup=ReplyKeyboardRemove())
     await SendNotification.notification.set()
 
 
-@dp.message_handler(state=SendNotification.notification)
+@dp.message_handler(regexp=r'^[^\/].+$', state=SendNotification.notification)
 async def check_notification(message: Message, state: FSMContext):
     await state.update_data(notification=message.text)
     await message.answer(text='Your notification is:\n\n'
@@ -41,7 +41,7 @@ async def check_notification(message: Message, state: FSMContext):
 
 @dp.callback_query_handler(text_contains='change', state=SendNotification.confirm)
 async def change_notification(call: CallbackQuery):
-    await call.answer(cache_time=10)
+    await call.answer(cache_time=1)
     await call.message.edit_reply_markup()
     await call.message.answer('Please, re-enter the text of the notification')
     await SendNotification.notification.set()
@@ -49,15 +49,13 @@ async def change_notification(call: CallbackQuery):
 
 @dp.callback_query_handler(text_contains='confirm', state=SendNotification.confirm)
 async def confirm_notification(call: CallbackQuery, state: FSMContext):
-    await call.answer(cache_time=10)
+    await call.answer(cache_time=1)
     data = await state.get_data()
-    notification = data.get('notification')
-    recipients = data.get('recipients')
     masters = await Master.query.gino.all()
     customers = await Customer.query.gino.all()
-    if recipients == 'Inform masters':
+    if data['recipients'] == 'Inform masters':
         recipients = masters
-    elif recipients == 'Inform customers':
+    elif data['recipients'] == 'Inform customers':
         recipients = customers
     else:
         recipients = (masters + customers)
@@ -65,7 +63,7 @@ async def confirm_notification(call: CallbackQuery, state: FSMContext):
         try:
             await bot.send_message(chat_id=recipient.chat_id,
                                    text='<b>Notification from administrator:</b>\n\n'
-                                        f'<em>"{notification}"</em>\n\n'
+                                        f'<em>"{data["notification"]}"</em>\n\n'
                                         'Wish you a good day!')
             await sleep(0.3)
         except Exception:
