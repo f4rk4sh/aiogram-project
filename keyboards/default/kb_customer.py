@@ -46,3 +46,27 @@ kb_request_contact = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
+
+kb_previous_visits = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="Archive")
+        ],
+        [
+            KeyboardButton(text='Back')
+        ],
+    ],
+    resize_keyboard=True
+)
+
+kb_cancel_visit = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="Cancel visit")
+        ],
+        [
+            KeyboardButton(text='Back')
+        ],
+    ],
+    resize_keyboard=True
+)
