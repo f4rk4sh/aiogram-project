@@ -3,7 +3,9 @@ from asyncio import sleep
 
 from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from aiogram.utils.exceptions import ChatNotFound
 
+from filters import IsAdmin
 from keyboards.default import kb_recipients, kb_admin_commands
 from keyboards.inline import kb_inform_confirm
 from loader import bot, dp
@@ -11,7 +13,7 @@ from states import SendNotification
 from utils.db_api.models import Customer, Master
 
 
-@dp.message_handler(text=['Send notification', '/inform'], state='*')
+@dp.message_handler(IsAdmin(), text=['Send notification', '/inform'], state='*')
 async def set_recipients(message: Message, state: FSMContext = None):
     if state is not None:
         await state.finish()
@@ -66,7 +68,11 @@ async def confirm_notification(call: CallbackQuery, state: FSMContext):
                                         f'<em>"{data["notification"]}"</em>\n\n'
                                         'Wish you a good day!')
             await sleep(0.3)
-        except Exception:
-            logging.info(f'Notification has not been sent to {recipient.name}, chat id: {recipient.chat_id}')
-    await call.message.answer('Notification has been successfully sent', reply_markup=kb_admin_commands)
+        except ChatNotFound:
+            logging.info(f'ChatNotFound: chat id - {recipient.chat_id}')
+            await call.message.answer(
+                f'<b>Alert:</b>\n\n'
+                f'Notification has not been to <b>{recipient.name}</b>, phone number: <b>{recipient.phone}</b>'
+            )
+    await call.message.answer('Main menu, choose one of the available commands 👇', reply_markup=kb_admin_commands)
     await state.finish()

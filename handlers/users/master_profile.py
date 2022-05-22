@@ -1,6 +1,7 @@
 from aiogram.dispatcher import FSMContext
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 
+from filters import IsMaster
 from keyboards.default import kb_master_commands, kb_master_profile
 from keyboards.inline import kb_portfolio_photo
 from loader import dp
@@ -8,7 +9,7 @@ from states import UpdateProfileInfo, UploadProfilePhoto, UploadPortfolioPhoto
 from utils.db_api.models import Master, PortfolioPhoto
 
 
-@dp.message_handler(text=['My profile', '/profile'], state='*')
+@dp.message_handler(IsMaster(), text=['My profile', '/profile'], state='*')
 async def master_profile(message: Message, state: FSMContext = None):
     master = await Master.query.where(Master.chat_id == message.from_user.id).gino.first()
     text = f'<b>Name:</b> {master.name}\n' \
@@ -22,7 +23,7 @@ async def master_profile(message: Message, state: FSMContext = None):
         await state.finish()
 
 
-@dp.message_handler(text=['Update profile info', '/update_info'], state='*')
+@dp.message_handler(IsMaster(), text=['Update profile info', '/update_info'], state='*')
 async def set_info(message: Message, state: FSMContext = None):
     await message.answer('Enter the text of the info\n\n'
                          '<em>HINT: up to 200 characters</em>', reply_markup=ReplyKeyboardRemove())
@@ -39,7 +40,7 @@ async def update_info(message: Message, state: FSMContext):
     await state.finish()
 
 
-@dp.message_handler(text=['Upload profile photo', '/profile_photo'], state='*')
+@dp.message_handler(IsMaster(), text=['Upload profile photo', '/profile_photo'], state='*')
 async def set_photo(message: Message, state: FSMContext = None):
     await message.answer('Attach a photo and send it\n\n'
                          '<em>HINT: takes only one photo</em>', reply_markup=ReplyKeyboardRemove())
@@ -58,7 +59,7 @@ async def upload_photo(message: Message, state: FSMContext):
     await state.finish()
 
 
-@dp.message_handler(text=['Upload portfolio photo', '/portfolio_photo'], state='*')
+@dp.message_handler(IsMaster(), text=['Upload portfolio photo', '/portfolio_photo'], state='*')
 async def set_portfolio_photo(message: Message, state: FSMContext = None):
     await message.answer('Attach a photo and send it\n\n'
                          '<em>HINT: takes only one photo</em>', reply_markup=ReplyKeyboardRemove())

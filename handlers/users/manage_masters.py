@@ -2,6 +2,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import (CallbackQuery, InlineKeyboardButton,
                            InlineKeyboardMarkup, Message, ReplyKeyboardRemove)
 
+from filters import IsAdmin
 from keyboards.default import kb_admin_commands, kb_manage_masters
 from keyboards.inline import kb_delete_confirm
 from loader import dp
@@ -9,12 +10,12 @@ from states import AddMaster, DeleteMaster
 from utils.db_api.models import Master
 
 
-@dp.message_handler(text='Manage masters')
+@dp.message_handler(IsAdmin(), text='Manage masters')
 async def manage_masters(message: Message):
     await message.answer('Select action', reply_markup=kb_manage_masters)
 
 
-@dp.message_handler(text=['Add master', '/add_master'], state='*')
+@dp.message_handler(IsAdmin(), text=['Add master', '/add_master'], state='*')
 async def set_chat_id(message: Message, state: FSMContext):
     if state is not None:
         await state.finish()
@@ -27,7 +28,7 @@ async def set_chat_id(message: Message, state: FSMContext):
 async def set_name(message: Message, state: FSMContext):
     await state.update_data(chat_id=int(message.text))
     await message.answer('Enter master\'s full name\n\n'
-                         '<em>HINT: need to contain firstname and lastname"</em>')
+                         '<em>HINT: need to contain firstname and lastname</em>')
     await AddMaster.name.set()
 
 
@@ -55,7 +56,7 @@ async def add_master(message: Message, state: FSMContext):
     await state.finish()
 
 
-@dp.message_handler(text=['Delete master', '/delete_master'], state='*')
+@dp.message_handler(IsAdmin(), text=['Delete master', '/delete_master'], state='*')
 async def select_master(message: Message, state: FSMContext):
     if state is not None:
         await state.finish()
