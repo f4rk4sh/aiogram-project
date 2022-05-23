@@ -1,21 +1,16 @@
+import asyncio
 import logging
 from datetime import date, time, datetime, timedelta
-import re
-from sqlalchemy import and_
 
 from aiogram.dispatcher import FSMContext
 from aiogram.types import (CallbackQuery, InlineKeyboardButton,
                            InlineKeyboardMarkup, Message, ReplyKeyboardRemove, InputMedia)
 from aiogram.utils.callback_data import CallbackData
 
-from filters import date_filters as df
-from filters import get_dates, update_dates
 from keyboards.default import kb_confirm_booking, kb_master_info, kb_masters, kb_request_contact
-from keyboards.inline import kb_time_slots
 from loader import dp
 from states import ChosenMaster
 from utils.db_api.models import Master, Customer, Timeslot, PortfolioPhoto
-
 
 
 @dp.message_handler(text=["List of our masters", "/masters"])
@@ -48,13 +43,20 @@ async def chosen_master(call: CallbackQuery, state: FSMContext):
 async def book_master(message: Message, state: FSMContext):
     data = await state.get_data()
     day = datetime.now().isoweekday()
-    dates = get_dates(day)
-    days_keyboard = get_days_keyboard(day, dates)
-    await state.update_data(dates=dates)
+    keyboard = InlineKeyboardMarkup()
+    num_d = 7 - day
+    async for time_inc in date_span(start=datetime.now(),
+                                    end=datetime.now() + timedelta(days=num_d),
+                                    delta=timedelta(days=1)):
+        keyboard.add(InlineKeyboardButton(text=f'{time_inc.strftime("%A %d.%m")}',
+                                          callback_data=f'{time_inc.strftime("%A %d.%m")}'))
+    keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
+                 InlineKeyboardButton(text="Next week", callback_data='Next week'))
+    await state.update_data(dima_last_day=datetime.now() + timedelta(days=num_d))
     await ChosenMaster.waiting_for_choosing_date.set()
     await message.answer(f"You have decided to book {data['master_name']}.\n"
                          f"Please choose the day!",
-                         reply_markup=days_keyboard)
+                         reply_markup=keyboard)
 
 
 @dp.callback_query_handler(text_contains="day", state=ChosenMaster.waiting_for_choosing_date)
@@ -65,46 +67,54 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     month = chosen_date[1].split('.')[1]
     day = chosen_date[1].split('.')[0]
     time_slot = InlineKeyboardMarkup()
-    for time_inc in date_span(start=datetime(2022, int(month), int(day), 10),
-                              end=datetime(2022, int(month), int(day), 19),
-                              delta=timedelta(hours=1)):
-        if await Timeslot.query.where(((Timeslot.date == time_inc.date()) & (Timeslot.time == time_inc.time()) & (Timeslot.master_id == data['master_id']))).gino.one_or_none():
+    async for time_inc in date_span(start=datetime(2022, int(month), int(day), 10),
+                                    end=datetime(2022, int(month), int(day), 19),
+                                    delta=timedelta(hours=1)):
+        if await Timeslot.query.where(((Timeslot.date == time_inc.date()) & (Timeslot.time == time_inc.time()) & (
+                Timeslot.master_id == data['master_id']))).gino.one_or_none():
             time_slot.add(InlineKeyboardButton(text=f'❌ Since {time_inc.strftime("%H:%M")} ❌', callback_data="booked"))
         else:
             time_slot.add(InlineKeyboardButton(text=f'Since {time_inc.strftime("%H:%M")}', callback_data=time_inc.hour))
 
-    await state.update_data(chosen_day=call.data.split(':')[1])
+    await state.update_data(chosen_day=call.data)
     await ChosenMaster.waiting_for_choosing_time.set()
     await call.message.answer(f"You are trying to view available slots "
-                              f"on {call.data.split(':')[1]} for {data['master_name']}\n"
+                              f"on {call.data} for {data['master_name']}\n"
                               f"Please, select the available one!",
                               reply_markup=time_slot)
 
 
 @dp.callback_query_handler(text_contains="week", state=ChosenMaster.waiting_for_choosing_date)
 async def book_day(call: CallbackQuery, state: FSMContext):
-    cm = await state.get_data()
-    dates = cm['dates']
-    today = str(datetime.now().strftime("%d.%m"))
-    first_day_in_dates = int(dates[0].split('.')[0])
-    if call.data.split(':')[1] == "Previous week" and datetime.now() > datetime(year=datetime.now().year,
-                                                                                month=int(dates[0].split('.')[1]),
-                                                                                day=int(dates[0].split('.')[0])):
+    data = await state.get_data()
+
+    if call.data == "Previous week" and datetime.now() > data['dima_first_day']:
         await call.answer(text="You can't navigate to the past", show_alert=True)
-    elif call.data.split(':')[1] == "Previous week":
-        if int(today.split('.')[0]) + 7 > first_day_in_dates:
-            day = datetime.now().isoweekday()
-        else:
-            day = 1
-        new_dates = update_dates(text=call.data.split(':')[1], dates=dates)
-        keyboard = get_days_keyboard(day, new_dates)
-        await state.update_data(dates=new_dates)
+    elif call.data == "Previous week":
+        keyboard = InlineKeyboardMarkup()
+        async for time_inc in date_span(start=data['dima_first_day'] - timedelta(days=6),
+                                        end=data['dima_first_day'],
+                                        delta=timedelta(days=1)):
+            if time_inc > datetime.now() - timedelta(days=1):
+                keyboard.add(InlineKeyboardButton(text=f'{time_inc.strftime("%A %d.%m")}',
+                                                  callback_data=f'{time_inc.strftime("%A %d.%m")}'))
+
+        keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
+                     InlineKeyboardButton(text="Next week", callback_data='Next week'))
+        await state.update_data(dima_first_day=data['dima_first_day'] - timedelta(days=7),
+                                dima_last_day=data['dima_first_day'])
         await call.message.edit_reply_markup(reply_markup=keyboard)
     else:
-        day = 1
-        new_dates = update_dates(text=call.data.split(':')[1], dates=dates)
-        keyboard = get_days_keyboard(day, new_dates)
-        await state.update_data(dates=new_dates)
+        keyboard = InlineKeyboardMarkup()
+        async for time_inc in date_span(start=data['dima_last_day'] + timedelta(days=1),
+                                        end=data['dima_last_day'] + timedelta(days=7),
+                                        delta=timedelta(days=1)):
+            keyboard.add(InlineKeyboardButton(text=f'{time_inc.strftime("%A %d.%m")}',
+                                              callback_data=f'{time_inc.strftime("%A %d.%m")}'))
+        keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
+                     InlineKeyboardButton(text="Next week", callback_data='Next week'))
+        await state.update_data(dima_first_day=data['dima_last_day'],
+                                dima_last_day=data['dima_last_day'] + timedelta(days=7))
         await call.message.edit_reply_markup(reply_markup=keyboard)
 
 
@@ -119,9 +129,10 @@ async def book_time(call: CallbackQuery, state: FSMContext):
         chosen_time = call.data
         await state.update_data(selected_date=chosen_date, selected_time=int(chosen_time))
         await ChosenMaster.waiting_for_confirmation.set()
-        await call.message.answer(f"You are trying to book {data['master_name']} on {data['chosen_day']} at {call.data}\n"
-                                  f"Press the 'Confirm booking' button",
-                                  reply_markup=kb_confirm_booking)
+        await call.message.answer(
+            f"You are trying to book {data['master_name']} on {data['chosen_day']} at {call.data}\n"
+            f"Press the 'Confirm booking' button",
+            reply_markup=kb_confirm_booking)
 
 
 @dp.message_handler(text="Confirm booking", state=ChosenMaster.waiting_for_confirmation)
@@ -131,9 +142,6 @@ async def book_confirmation(message: Message, state: FSMContext):
 
 @dp.message_handler(content_types=['contact'], state=ChosenMaster.waiting_for_confirmation)
 async def phone_verification(message: Message, state: FSMContext):
-    # if len(message.text) != 9 or message.text.startswith(("+", "0")) or not message.text.isnumeric():
-    #     await message.answer(f"Wrong number. Try again")
-    # else:
     data = await state.get_data()
     chat_id = message.chat.id
     name = message.from_user.full_name
@@ -160,26 +168,7 @@ async def phone_verification(message: Message, state: FSMContext):
     await state.finish()
 
 
-def get_days_keyboard(day, dates):
-    master_callback = CallbackData("booking_days", "day_of_week")
-    switching = CallbackData("switch", "switch_to")
-    days_kb = [
-        [
-            InlineKeyboardButton(text=f"{df.week.get(d)} {dates[d-1]}",
-                                 callback_data=master_callback.new(day_of_week=f"{df.week.get(d)} {dates[d-1]}"))
-        ]
-        for d in range(day, len(df.week) + 1)
-    ]
-    prev_next_bt = [
-        InlineKeyboardButton(text="Previous week", callback_data=switching.new(switch_to="Previous week")),
-        InlineKeyboardButton(text="Next week", callback_data=switching.new(switch_to="Next week"))
-    ]
-    days_kb.append(prev_next_bt)
-    booking_days = InlineKeyboardMarkup(inline_keyboard=days_kb)
-    return booking_days
-  
-  
-def date_span(start, end, delta):
+async def date_span(start, end, delta):
     current_date = start
     while current_date <= end:
         yield current_date
@@ -220,7 +209,8 @@ async def portfolio(message: Message, state: FSMContext):
         await message.answer(f'{data["master_name"]} has no portfolio photos yet', reply_markup=kb_masters)
 
 
-@dp.callback_query_handler(portfolio_photos_callback.filter(), state=ChosenMaster.waiting_for_choosing_booking_or_portfolio)
+@dp.callback_query_handler(portfolio_photos_callback.filter(),
+                           state=ChosenMaster.waiting_for_choosing_booking_or_portfolio)
 async def photos_page_handler(call: CallbackQuery, callback_data: dict):
     page = int(callback_data.get('page'))
     master_id = int(callback_data.get('master_id'))
