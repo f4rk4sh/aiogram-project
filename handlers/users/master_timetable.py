@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, date, time
 
+from filters import IsMaster
 from handlers.users.customer_commands import date_span
 from keyboards.default import kb_confirm_booking, kb_master_commands
 from loader import dp
@@ -10,7 +11,7 @@ from utils.db_api.models import Master, Timeslot, Customer
 from states import MasterTimetable
 
 
-@dp.message_handler(text=["My timetable", "/timetable"], state="*")
+@dp.message_handler(IsMaster(), text=["My timetable", "/timetable"], state="*")
 async def my_time_table(message: Message, state: FSMContext = None):
     if state:
         await state.finish()
