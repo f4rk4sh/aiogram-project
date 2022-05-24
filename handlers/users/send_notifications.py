@@ -72,7 +72,7 @@ async def confirm_notification(call: CallbackQuery, state: FSMContext):
             logging.info(f'ChatNotFound: chat id - {recipient.chat_id}')
             await call.message.answer(
                 f'<b>Alert:</b>\n\n'
-                f'Notification has not been to <b>{recipient.name}</b>, phone number: <b>{recipient.phone}</b>'
+                f'Notification has not been sent to <b>{recipient.name}</b>, phone number: <b>{recipient.phone}</b>'
             )
     await call.message.answer('Main menu, choose one of the available commands 👇', reply_markup=kb_admin_commands)
     await state.finish()

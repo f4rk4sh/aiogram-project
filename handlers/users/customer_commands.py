@@ -154,6 +154,7 @@ async def phone_verification(message: Message, state: FSMContext):
     master_id = data['master_id']
     await Timeslot.create(date=chosen_date,
                           time=chosen_time,
+                          datetime=datetime.combine(chosen_date, chosen_time),
                           is_free=False,
                           customer_id=customer_id, master_id=master_id)
     await message.answer(f"Done!", reply_markup=kb_masters)

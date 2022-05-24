@@ -44,5 +44,5 @@ class ThrottlingMiddleware(BaseMiddleware):
     async def on_process_message(self, message: Message, data: dict):
         await self.throttle(message)
 
-    async def on_process_callback_query(self, call: CallbackQuery, data: dict):
-        await self.throttle(call)
+    # async def on_process_callback_query(self, call: CallbackQuery, data: dict):
+    #     await self.throttle(call)
