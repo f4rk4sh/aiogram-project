@@ -4,10 +4,13 @@ kb_master_info = ReplyKeyboardMarkup(
     one_time_keyboard=True,
     keyboard=[
         [
+            KeyboardButton(text="Book master"),
+        ],
+        [
             KeyboardButton(text="Portfolio"),
         ],
         [
-            KeyboardButton(text="Book master"),
+            KeyboardButton(text="Back"),
         ],
     ],
     resize_keyboard=True
@@ -64,6 +67,15 @@ kb_cancel_visit = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="Cancel visit")
         ],
+        [
+            KeyboardButton(text='Back')
+        ],
+    ],
+    resize_keyboard=True
+)
+
+kb_back = ReplyKeyboardMarkup(
+    keyboard=[
         [
             KeyboardButton(text='Back')
         ],

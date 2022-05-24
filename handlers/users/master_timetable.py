@@ -128,6 +128,7 @@ async def phone_verification(message: Message, state: FSMContext):
         if customer:
             await Timeslot.create(date=chosen_date,
                                   time=chosen_time,
+                                  datetime=datetime.combine(chosen_date, chosen_time),
                                   is_free=False,
                                   customer_id=customer.id,
                                   master_id=data['master_id'])
@@ -150,6 +151,7 @@ async def customer_name(message: Message, state: FSMContext):
         customer = await Customer.create(name=message.text, phone=data['phone'])
         await Timeslot.create(date=data['chosen_date'],
                               time=data['chosen_time'],
+                              datetime=datetime.combine(data['chosen_date'], data['chosen_time']),
                               is_free=False,
                               customer_id=customer.id, master_id=data['master_id'])
         await message.answer(f"Done!", reply_markup=kb_master_commands)

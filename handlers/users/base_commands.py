@@ -63,7 +63,9 @@ async def command_help(message: Message, state: FSMContext = None):
                              reply_markup=kb_master_commands)
     else:
         await message.answer(text='<b>Available commands</b>\n\n'
-                                  '/masters - <em>view list of masters</em>\n'
-                                  '/visits - <em>view your upcoming or previous visits</em>\n'
+                                  '/masters - <em>view list of masters, choose master, '
+                                  'continue with portfolio browsing or with booking chosen master</em>\n'
+                                  '/visits - <em>view your upcoming or previous visits, '
+                                  'you can chose upcoming visit and cancel it if needed</em>\n'
                                   '/contact - <em>view contact information</em>',
                              reply_markup=kb_masters)

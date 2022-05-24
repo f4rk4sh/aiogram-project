@@ -35,6 +35,7 @@ class Timeslot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date)
     time = db.Column(db.Time)
+    datetime = db.Column(db.DateTime)
     is_free = db.Column(db.Boolean, default=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customer.id', ondelete='CASCADE'))
     master_id = db.Column(db.Integer, db.ForeignKey('master.id', ondelete='SET NULL'))

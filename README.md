@@ -6,14 +6,8 @@ This project is intended to be helpful in relationship between business and peop
 
 - clone it
 - copy `.env.example` to `.env` and fill it with your data
-- run `pip install -r requirements.txt`
-- run `python app.py`
+- run `docker-compose up`
 
 ## configuration
 
 Project is configured through `config.py`.
-
-
-## More info
-
-Some info
