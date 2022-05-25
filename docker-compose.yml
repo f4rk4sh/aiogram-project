@@ -7,7 +7,7 @@ services:
       - .:/src
     env_file:
       - .env
-    command: python app.py
+    command: /bin/bash -c "pip install -r requirements.txt && python app.py"
     depends_on:
       - db
 
@@ -17,6 +17,13 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    env_file:
+      - .env
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
     env_file:
       - .env
 

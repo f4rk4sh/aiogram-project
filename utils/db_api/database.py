@@ -11,8 +11,8 @@ async def create_db():
 
     # drop tables
 
-    await db.gino.drop_all()
-
-    # create tables
-
-    await db.gino.create_all()
+    # await db.gino.drop_all()
+    #
+    # # create tables
+    #
+    # await db.gino.create_all()

@@ -34,7 +34,6 @@ async def notify_customer():
 
 
 async def scheduler():
-    # hour.at(':30')
     aioschedule.every().hour.at(':30').do(notify_customer)
     while True:
         await aioschedule.run_pending()
