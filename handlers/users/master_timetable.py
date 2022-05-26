@@ -70,7 +70,6 @@ async def book_day(call: CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(text_contains="week", state=MasterTimetable.waiting_for_choosing_day)
 async def book_day(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-
     if call.data == "Previous week":
         keyboard = InlineKeyboardMarkup()
         async for time_inc in date_span(start=data['dima_first_day'] - timedelta(days=6),
@@ -179,7 +178,6 @@ async def phone_verification(message: Message, state: FSMContext):
                            second=0)
         await state.update_data(chosen_date=chosen_date, chosen_time=chosen_time)
         customer = await Customer.query.where(Customer.phone == phone).gino.one_or_none()
-
         if customer:
             try:
                 await Timeslot.create(datetime=datetime.combine(chosen_date, chosen_time),

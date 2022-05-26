@@ -7,11 +7,14 @@ load_dotenv()
 TOKEN = str(os.getenv('TOKEN'))
 
 ADMINS = [int(admin_id) for admin_id in os.getenv('ADMINS').split(',')]
-MASTERS = [int(master_id) for master_id in os.getenv('MASTERS').split(',')]
 
-PG_HOST = str(os.getenv('PG_HOST'))
-PG_USER = str(os.getenv('PG_USER'))
-PG_PASSWORD = str(os.getenv('PG_PASSWORD'))
-PG_DATABASE = str(os.getenv('PG_DATABASE'))
+POSTGRES_HOST = str(os.getenv('POSTGRES_HOST'))
+POSTGRES_USER = str(os.getenv('POSTGRES_USER'))
+POSTGRES_PASSWORD = str(os.getenv('POSTGRES_PASSWORD'))
+POSTGRES_DB = str(os.getenv('POSTGRES_DB'))
 
-POSTGRES_URI = f'postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}/{PG_DATABASE}'
+POSTGRES_URI = f'postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{POSTGRES_DB}'
+
+REDIS_HOST = str(os.getenv('REDIS_HOST'))
+REDIS_DB = int(os.getenv('REDIS_DB'))
+REDIS_PORT = int(os.getenv('REDIS_PORT'))

@@ -12,7 +12,8 @@ async def errors_handler(update, exception):
     :return: stdout logging
     """
     from aiogram.utils.exceptions import (CantDemoteChatCreator,
-                                          CantParseEntities, InvalidQueryID,
+                                          CantParseEntities, ChatNotFound,
+                                          InvalidQueryID,
                                           MessageCantBeDeleted,
                                           MessageNotModified,
                                           MessageTextIsEmpty,
@@ -41,6 +42,10 @@ async def errors_handler(update, exception):
 
     if isinstance(exception, Unauthorized):
         logging.info(f'Unauthorized: {exception}')
+        return True
+
+    if isinstance(exception, ChatNotFound):
+        logging.exception(f'ChatNotFound: {exception} \nUpdate: {update}')
         return True
 
     if isinstance(exception, InvalidQueryID):

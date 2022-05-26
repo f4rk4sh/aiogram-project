@@ -77,13 +77,10 @@ async def book_master(message: Message, state: FSMContext):
         else:
             keyboard.add(InlineKeyboardButton(text=f'{time_inc.strftime("%A %d.%m")}',
                                               callback_data=f'{time_inc.strftime("%A %d.%m")}'))
-
     keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
                  InlineKeyboardButton(text="Next week", callback_data='Next week'))
-
     keyboard.add(InlineKeyboardButton(text=f'Back to choosing masters',
                                       callback_data="Back to choosing masters"))
-
     await state.update_data(dima_last_day=datetime.now() + timedelta(days=num_d))
     await ChosenMaster.waiting_for_choosing_date.set()
     await message.answer(f"You have decided to book <b>{data['master_name'].capitalize()}</b>\n"
@@ -134,7 +131,6 @@ async def back_to_masters(call: CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(text_contains="week", state=ChosenMaster.waiting_for_choosing_date)
 async def book_day(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-
     if call.data == "Previous week" and datetime.now() > data['dima_first_day']:
         await call.answer(text="You can't navigate to the past", show_alert=True)
     elif call.data == "Previous week":
@@ -171,7 +167,6 @@ async def book_day(call: CallbackQuery, state: FSMContext):
             else:
                 keyboard.add(InlineKeyboardButton(text=f'{time_inc.strftime("%A %d.%m")}',
                                                   callback_data=f'{time_inc.strftime("%A %d.%m")}'))
-
         keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
                      InlineKeyboardButton(text="Next week", callback_data='Next week'))
         keyboard.add(InlineKeyboardButton(text=f'Back to choosing masters',
@@ -222,7 +217,6 @@ async def book_confirmation(message: Message, state: FSMContext):
             await Timeslot.create(datetime=datetime.combine(chosen_date, chosen_time),
                                   is_free=False,
                                   customer_id=customer.id, master_id=data['master_id'])
-
             master = await Master.query.where(Master.id == data["master_id"]).gino.first()
             await message.answer(f'<b>You have successfully booked {master.name}!</b>\n'
                                  f'Pleased to see you on {data["chosen_day"]} at {data["selected_time"]}:00.',
@@ -275,7 +269,6 @@ async def phone_verification(message: Message, state: FSMContext):
     await Timeslot.create(datetime=datetime.combine(chosen_date, chosen_time),
                           is_free=False,
                           customer_id=customer_id, master_id=master_id)
-
     await message.answer(f"Done!", reply_markup=kb_masters)
     master = await Master.query.where(Master.id == data['master_id']).gino.first()
     customer = await Customer.query.where(Customer.chat_id == chat_id).gino.first()
