@@ -109,7 +109,7 @@ async def archive_visits(message: Message, state: FSMContext):
         for visit in visits:
             master = await Master.query.where(Master.id == visit.master_id).gino.one_or_none()
             text += f'\n\n<b>Master:</b> {master.name}\n' \
-                    f'<b>Date:</b> {visit.datetime("%d.%m")}\n' \
+                    f'<b>Date:</b> {visit.datetime.strftime("%d.%m")}\n' \
                     f'<b>Time:</b> {visit.datetime.strftime("%H:%M")}'
         await message.answer(text=text, reply_markup=kb_masters)
     else:

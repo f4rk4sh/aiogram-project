@@ -36,7 +36,7 @@ kb_manage_masters = ReplyKeyboardMarkup(
             KeyboardButton(text="Add master"),
         ],
         [
-            KeyboardButton(text="Delete master"),
+            KeyboardButton(text="Fire the master"),
         ],
     ],
     resize_keyboard=True,

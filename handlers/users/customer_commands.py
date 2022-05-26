@@ -1,16 +1,15 @@
-# import asyncio
 import logging
 from asyncio import sleep
 from datetime import date, time, datetime, timedelta
 
 from aiogram.dispatcher import FSMContext
 from aiogram.types import (CallbackQuery, InlineKeyboardButton,
-                           InlineKeyboardMarkup, Message, ReplyKeyboardRemove, InputMedia)
-from aiogram.utils.callback_data import CallbackData
+                           InlineKeyboardMarkup, Message, InputMedia)
 from aiogram.utils.exceptions import ChatNotFound
 from asyncpg import UniqueViolationError
 
-from keyboards.default import kb_confirm_booking, kb_master_info, kb_masters, kb_request_contact
+from keyboards.default import kb_confirm_booking, kb_master_info, kb_masters, kb_request_contact, kb_back
+from keyboards.inline import get_portfolio_photos_keyboard, portfolio_photos_callback
 from loader import bot, dp
 from states import ChosenMaster
 from utils.db_api.models import Master, Customer, Timeslot, PortfolioPhoto
@@ -21,14 +20,18 @@ from utils.misc import date_span
 async def list_of_masters(message: Message, state: FSMContext = None):
     if state:
         await state.finish()
-    masters = await Master.query.gino.all()
-    kb_master_list = InlineKeyboardMarkup()
-    for master in masters:
-        kb_master_list.add(InlineKeyboardButton(text=master.name, callback_data=master.id))
-    await ChosenMaster.waiting_for_choosing_master.set()
-    await message.answer("<b>Here are our best masters!</b>\n"
-                         "Please chose one",
-                         reply_markup=kb_master_list)
+    masters = await Master.query.where(Master.is_active).gino.all()
+    if masters:
+        kb_master_list = InlineKeyboardMarkup()
+        for master in masters:
+            kb_master_list.add(InlineKeyboardButton(text=master.name, callback_data=master.id))
+        await ChosenMaster.waiting_for_choosing_master.set()
+        await message.answer("<b>Here are our best masters!</b>\n"
+                             "Please chose one",
+                             reply_markup=kb_master_list)
+    else:
+        await message.answer('Unfortunately, there are no masters added yet',
+                             reply_markup=kb_masters)
 
 
 @dp.callback_query_handler(state=ChosenMaster.waiting_for_choosing_master)
@@ -81,7 +84,8 @@ async def book_master(message: Message, state: FSMContext):
                  InlineKeyboardButton(text="Next week", callback_data='Next week'))
     keyboard.add(InlineKeyboardButton(text=f'Back to choosing masters',
                                       callback_data="Back to choosing masters"))
-    await state.update_data(dima_last_day=datetime.now() + timedelta(days=num_d))
+    last_day = datetime.now() + timedelta(days=num_d)
+    await state.update_data(last_day=last_day.strftime("%y-%m-%d %H:%M:%S"))
     await ChosenMaster.waiting_for_choosing_date.set()
     await message.answer(f"You have decided to book <b>{data['master_name'].capitalize()}</b>\n"
                          f"Please choose the day!",
@@ -131,12 +135,12 @@ async def back_to_masters(call: CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(text_contains="week", state=ChosenMaster.waiting_for_choosing_date)
 async def book_day(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    if call.data == "Previous week" and datetime.now() > data['dima_first_day']:
+    if call.data == "Previous week" and datetime.now() > datetime.strptime(data['first_day'], "%y-%m-%d %H:%M:%S"):
         await call.answer(text="You can't navigate to the past", show_alert=True)
     elif call.data == "Previous week":
         keyboard = InlineKeyboardMarkup()
-        async for time_inc in date_span(start=data['dima_first_day'] - timedelta(days=6),
-                                        end=data['dima_first_day'],
+        async for time_inc in date_span(start=datetime.strptime(data['first_day'], "%y-%m-%d %H:%M:%S") - timedelta(days=6),
+                                        end=datetime.strptime(data['first_day'], "%y-%m-%d %H:%M:%S"),
                                         delta=timedelta(days=1)):
             if time_inc > datetime.now() - timedelta(days=1):
                 if await Timeslot.query.where(
@@ -152,13 +156,14 @@ async def book_day(call: CallbackQuery, state: FSMContext):
                      InlineKeyboardButton(text="Next week", callback_data='Next week'))
         keyboard.add(InlineKeyboardButton(text=f'Back to choosing masters',
                                           callback_data="Back to choosing masters"))
-        await state.update_data(dima_first_day=data['dima_first_day'] - timedelta(days=7),
-                                dima_last_day=data['dima_first_day'])
+        first_day = datetime.strptime(data['first_day'], "%y-%m-%d %H:%M:%S") - timedelta(days=7)
+        await state.update_data(first_day=first_day.strftime("%y-%m-%d %H:%M:%S"),
+                                last_day=data['first_day'])
         await call.message.edit_reply_markup(reply_markup=keyboard)
     else:
         keyboard = InlineKeyboardMarkup()
-        async for time_inc in date_span(start=data['dima_last_day'] + timedelta(days=1),
-                                        end=data['dima_last_day'] + timedelta(days=7),
+        async for time_inc in date_span(start=datetime.strptime(data['last_day'], "%y-%m-%d %H:%M:%S") + timedelta(days=1),
+                                        end=datetime.strptime(data['last_day'], "%y-%m-%d %H:%M:%S") + timedelta(days=7),
                                         delta=timedelta(days=1)):
             if await Timeslot.query.where(
                     (Timeslot.date == time_inc.date()) & (Timeslot.master_id == data['master_id'])).gino.one_or_none():
@@ -171,8 +176,9 @@ async def book_day(call: CallbackQuery, state: FSMContext):
                      InlineKeyboardButton(text="Next week", callback_data='Next week'))
         keyboard.add(InlineKeyboardButton(text=f'Back to choosing masters',
                                           callback_data="Back to choosing masters"))
-        await state.update_data(dima_first_day=data['dima_last_day'],
-                                dima_last_day=data['dima_last_day'] + timedelta(days=7))
+        last_day = datetime.strptime(data['last_day'], "%y-%m-%d %H:%M:%S") + timedelta(days=7)
+        await state.update_data(first_day=data['last_day'],
+                                last_day=last_day.strftime("%y-%m-%d %H:%M:%S"))
         await call.message.edit_reply_markup(reply_markup=keyboard)
 
 
@@ -289,29 +295,6 @@ async def phone_verification(message: Message, state: FSMContext):
     await state.finish()
 
 
-portfolio_photos_callback = CallbackData('Photo', 'page', 'master_id')
-
-
-def get_portfolio_photos_keyboard(photos, page: int = 0):
-    keyboard = InlineKeyboardMarkup(row_width=3)
-    has_next_page = len(photos) > page + 1
-    if page != 0:
-        keyboard.add(
-            InlineKeyboardButton(
-                text='Previous photo',
-                callback_data=portfolio_photos_callback.new(page=page - 1, master_id=photos[0].master_id)
-            )
-        )
-    if has_next_page:
-        keyboard.add(
-            InlineKeyboardButton(
-                text='Next photo',
-                callback_data=portfolio_photos_callback.new(page=page + 1, master_id=photos[0].master_id)
-            )
-        )
-    return keyboard
-
-
 @dp.message_handler(text='Portfolio', state=ChosenMaster.waiting_for_choosing_booking_or_portfolio)
 async def portfolio(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -332,3 +315,4 @@ async def photos_page_handler(call: CallbackQuery, callback_data: dict):
     photo_data = photos[page]
     photo = InputMedia(type='photo', media=photo_data.photo_id)
     await call.message.edit_media(photo, get_portfolio_photos_keyboard(photos, page))
+    await call.message.answer('Press <b>"Back" to main menu</b>', reply_markup=kb_back)
