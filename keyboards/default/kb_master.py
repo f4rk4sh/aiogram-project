@@ -26,3 +26,15 @@ kb_master_profile = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True,
 )
+
+kb_master_cancel_booking = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="Cancel booking"),
+        ],
+        [
+            KeyboardButton(text="Back"),
+        ],
+    ],
+    resize_keyboard=True,
+)

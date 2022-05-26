@@ -24,7 +24,7 @@ async def command_start(message: Message, state: FSMContext = None):
                              'Please, check out our professional masters 👇 \n', reply_markup=kb_masters)
 
 
-@dp.message_handler(text=['/menu', 'Back'], state='*')
+@dp.message_handler(text=['/menu', 'Back', 'Cancel'], state='*')
 async def command_menu(message: Message, state: FSMContext = None):
     if state is not None:
         await state.finish()

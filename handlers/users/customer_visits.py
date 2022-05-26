@@ -1,5 +1,6 @@
 import logging
 import os
+
 from datetime import datetime
 
 from aiogram.dispatcher import FSMContext
@@ -30,7 +31,7 @@ async def customer_visits(message: Message, state: FSMContext = None):
                     master = await Master.query.where(Master.id == visit.master_id).gino.first()
                     kb_visits.add(
                         InlineKeyboardButton(
-                            text=f'Date: {visit.date}, time: {visit.time.strftime("%H:%M")}',
+                            text=f'Date: {visit.datetime.strftime("%d.%m")}, time: {visit.datetime.strftime("%H:%M")}',
                             callback_data=portfolio_photos_callback.new(
                                 visit_id=visit.id,
                                 master_id=master.id
@@ -62,10 +63,11 @@ async def visit_detail(call: CallbackQuery, callback_data: dict, state: FSMConte
     await call.answer(cache_time=1)
     visit = await Timeslot.query.where(Timeslot.id == int(callback_data['visit_id'])).gino.first()
     master = await Master.query.where(Master.id == visit.master_id).gino.first()
-    text = f'<b>Master:</b> {master.name}\n' \
-           f'<b>Date:</b> {visit.date}\n' \
-           f'<b>Time:</b> {visit.time.strftime("%H:%M")}\n' \
+    text = f'<b>Master:</b> {master.name}\n'\
+           f'<b>Date:</b> {visit.datetime.strftime("%d.%m")}\n'\
+           f'<b>Time:</b> {visit.datetime.strftime("%H:%M")}\n' \
            f'<b>Master info:</b> {master.info}'
+
     if master.photo_id:
         await call.message.answer_photo(photo=master.photo_id, caption=text, reply_markup=kb_cancel_visit)
     else:
@@ -82,7 +84,7 @@ async def visit_cancel(message: Message, state: FSMContext):
         await bot.send_message(chat_id=data['master_chat_id'],
                                text='<b>Notification:</b>\n\n'
                                     'Customer has been canceled his visit\n\n'
-                                    f'Timeslot <b>{visit.date}, {visit.time.strftime("%H:%M")}</b> is now free')
+                                    f'Timeslot <b>{visit.datetime.strftime("%d.%m")}, {visit.datetime.strftime("%H:%M")}</b> is now free')
     except ChatNotFound:
         logging.info(f'ChatNotFound: chat id - {data["master_chat_id"]}')
         await message.answer(
@@ -107,8 +109,8 @@ async def archive_visits(message: Message, state: FSMContext):
         for visit in visits:
             master = await Master.query.where(Master.id == visit.master_id).gino.one_or_none()
             text += f'\n\n<b>Master:</b> {master.name}\n' \
-                    f'<b>Date:</b> {visit.date}\n' \
-                    f'<b>Time:</b> {visit.datetime.time().strftime("%H:%M")}'
+                    f'<b>Date:</b> {visit.datetime("%d.%m")}\n' \
+                    f'<b>Time:</b> {visit.datetime.strftime("%H:%M")}'
         await message.answer(text=text, reply_markup=kb_masters)
     else:
         await message.answer(text='Unfortunately, you have no previous visits yet', reply_markup=kb_masters)
