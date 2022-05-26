@@ -10,6 +10,7 @@ class Master(db.Model):
     phone = db.Column(db.String(13), unique=True)
     info = db.Column(db.String(200))
     photo_id = db.Column(db.String(200))
+    is_active = db.Column(db.Boolean, default=True)
 
     def __repr__(self):
         return f'<Master {self.id}>'

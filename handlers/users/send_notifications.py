@@ -53,7 +53,7 @@ async def change_notification(call: CallbackQuery):
 async def confirm_notification(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=1)
     data = await state.get_data()
-    masters = await Master.query.gino.all()
+    masters = await Master.query.where(Master.is_active).gino.all()
     customers = await Customer.query.gino.all()
     if data['recipients'] == 'Inform masters':
         recipients = masters

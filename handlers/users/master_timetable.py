@@ -1,5 +1,5 @@
 from asyncio import sleep
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta, date
 
 from asyncpg import UniqueViolationError
 
@@ -33,7 +33,8 @@ async def my_time_table(message: Message, state: FSMContext = None):
                                               callback_data=f'{time_inc.strftime("%A %d.%m")}'))
     keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
                  InlineKeyboardButton(text="Next week", callback_data='Next week'))
-    await state.update_data(dima_last_day=datetime.now() + timedelta(days=num_d))
+    last_day = datetime.now() + timedelta(days=num_d)
+    await state.update_data(last_day=last_day.strftime("%y-%m-%d %H:%M:%S"))
     await state.update_data(master_id=master.id)
     await MasterTimetable.waiting_for_choosing_day.set()
     await message.answer(f"Choose day",
@@ -42,7 +43,7 @@ async def my_time_table(message: Message, state: FSMContext = None):
 
 @dp.callback_query_handler(text_contains="day", state=MasterTimetable.waiting_for_choosing_day)
 async def book_day(call: CallbackQuery, state: FSMContext):
-    await call.answer(cache_time=10)
+    await call.answer(cache_time=1)
     data = await state.get_data()
     chosen_date = call.data.split(' ')
     month = chosen_date[1].split('.')[1]
@@ -59,9 +60,10 @@ async def book_day(call: CallbackQuery, state: FSMContext):
             else:
                 time_slot.add(InlineKeyboardButton(text=f'Since {time_inc.strftime("%H:%M")}',
                                                    callback_data=time_inc.hour))
-    time_slot.add(InlineKeyboardButton(text=f'Make day off',
+    time_slot.add(InlineKeyboardButton(text=f'🏝 Make day off 🏖',
                                        callback_data='off'))
-    await state.update_data(chosen_day=call.data, day_off=date(year=2022, month=int(month), day=int(day)))
+    day_off = date(year=2022, month=int(month), day=int(day)).strftime("%y-%m-%d")
+    await state.update_data(chosen_day=call.data, day_off=day_off)
     await MasterTimetable.waiting_for_choosing_time.set()
     await call.message.answer(f"Here is your schedule on <b>{call.data}</b>",
                               reply_markup=time_slot)
@@ -72,9 +74,10 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     if call.data == "Previous week":
         keyboard = InlineKeyboardMarkup()
-        async for time_inc in date_span(start=data['dima_first_day'] - timedelta(days=6),
-                                        end=data['dima_first_day'],
-                                        delta=timedelta(days=1)):
+        async for time_inc in date_span(
+                start=datetime.strptime(data['first_day'], "%y-%m-%d %H:%M:%S") - timedelta(days=6),
+                end=datetime.strptime(data['first_day'], "%y-%m-%d %H:%M:%S"),
+                delta=timedelta(days=1)):
             if await Timeslot.query.where(
                     (Timeslot.date == time_inc.date()) & (Timeslot.master_id == data['master_id'])).gino.one_or_none():
                 keyboard.add(InlineKeyboardButton(text=f'❌ {time_inc.strftime("%A %d.%m")} ❌',
@@ -84,14 +87,16 @@ async def book_day(call: CallbackQuery, state: FSMContext):
                                                   callback_data=f'{time_inc.strftime("%A %d.%m")}'))
         keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
                      InlineKeyboardButton(text="Next week", callback_data='Next week'))
-        await state.update_data(dima_first_day=data['dima_first_day'] - timedelta(days=7),
-                                dima_last_day=data['dima_first_day'])
+        first_day = datetime.strptime(data['first_day'], "%y-%m-%d %H:%M:%S") - timedelta(days=7)
+        await state.update_data(first_day=first_day.strftime("%y-%m-%d %H:%M:%S"),
+                                last_day=data['first_day'])
         await call.message.edit_reply_markup(reply_markup=keyboard)
     else:
         keyboard = InlineKeyboardMarkup()
-        async for time_inc in date_span(start=data['dima_last_day'] + timedelta(days=1),
-                                        end=data['dima_last_day'] + timedelta(days=7),
-                                        delta=timedelta(days=1)):
+        async for time_inc in date_span(
+                start=datetime.strptime(data['last_day'], "%y-%m-%d %H:%M:%S") + timedelta(days=1),
+                end=datetime.strptime(data['last_day'], "%y-%m-%d %H:%M:%S") + timedelta(days=7),
+                delta=timedelta(days=1)):
             if await Timeslot.query.where(
                     (Timeslot.date == time_inc.date()) & (Timeslot.master_id == data['master_id'])).gino.one_or_none():
                 keyboard.add(InlineKeyboardButton(text=f'❌ {time_inc.strftime("%A %d.%m")} ❌',
@@ -101,8 +106,9 @@ async def book_day(call: CallbackQuery, state: FSMContext):
                                                   callback_data=f'{time_inc.strftime("%A %d.%m")}'))
         keyboard.add(InlineKeyboardButton(text="Previous week", callback_data='Previous week'),
                      InlineKeyboardButton(text="Next week", callback_data='Next week'))
-        await state.update_data(dima_first_day=data['dima_last_day'],
-                                dima_last_day=data['dima_last_day'] + timedelta(days=7))
+        last_day = datetime.strptime(data['last_day'], "%y-%m-%d %H:%M:%S") + timedelta(days=7)
+        await state.update_data(first_day=data['last_day'],
+                                last_day=last_day.strftime("%y-%m-%d %H:%M:%S"))
         await call.message.edit_reply_markup(reply_markup=keyboard)
 
 
@@ -113,9 +119,12 @@ async def make_day_off(call: CallbackQuery, state: FSMContext):
 
 @dp.callback_query_handler(text_contains="off", state=MasterTimetable.waiting_for_choosing_time)
 async def make_day_off(call: CallbackQuery, state: FSMContext):
+    await call.answer(cache_time=1)
     data = await state.get_data()
-    await Timeslot.create(master_id=data['master_id'], is_free=False, date=data['day_off'])
-    await call.message.answer("Done", reply_markup=kb_master_commands)
+    await Timeslot.create(master_id=data['master_id'],
+                          is_free=False,
+                          date=datetime.strptime(data['day_off'], "%y-%m-%d").date())
+    await call.message.answer("Done!", reply_markup=kb_master_commands)
 
 
 @dp.callback_query_handler(state=MasterTimetable.waiting_for_choosing_time)
@@ -123,7 +132,7 @@ async def book_or_cancel_time(call: CallbackQuery, state: FSMContext):
     if call.data.split('_')[0] == "booked":
         slot = datetime.strptime(call.data.split('_')[1], "%y-%m-%d %H:%M:%S")
         if slot > datetime.now():
-            await state.update_data(slot=slot)
+            await state.update_data(slot=call.data.split('_')[1])
             await MasterTimetable.waiting_for_cancellation.set()
             await call.message.answer("Do you want to cancel booking?", reply_markup=kb_master_cancel_booking)
         else:
@@ -143,7 +152,11 @@ async def book_or_cancel_time(call: CallbackQuery, state: FSMContext):
 @dp.message_handler(text="Cancel booking", state=MasterTimetable.waiting_for_cancellation)
 async def cancel_booking(message: Message, state: FSMContext):
     data = await state.get_data()
-    visit = await Timeslot.query.where((Timeslot.datetime == data['slot']) & (Timeslot.master_id == data['master_id'])).gino.first()
+    slot = datetime.strptime(data['slot'], "%y-%m-%d %H:%M:%S")
+    visit = await Timeslot.query.where(
+        (Timeslot.datetime == slot) &
+        (Timeslot.master_id == data['master_id'])
+    ).gino.first()
     customer = await Customer.query.where(Customer.id == visit.customer_id).gino.first()
     if customer.chat_id:
         await bot.send_message(chat_id=customer.chat_id,
@@ -170,17 +183,18 @@ async def phone_verification(message: Message, state: FSMContext):
     else:
         data = await state.get_data()
         phone = '+380' + message.text
-        chosen_date = date(year=datetime.now().year,
-                           month=int(data['selected_date'].split('.')[1]),
-                           day=int(data['selected_date'].split('.')[0]))
-        chosen_time = time(hour=data['selected_time'],
-                           minute=0,
-                           second=0)
-        await state.update_data(chosen_date=chosen_date, chosen_time=chosen_time)
+        chosen_datetime = datetime(year=datetime.now().year,
+                                   month=int(data['selected_date'].split('.')[1]),
+                                   day=int(data['selected_date'].split('.')[0]),
+                                   hour=data['selected_time'],
+                                   minute=0,
+                                   second=0
+                                   )
+        await state.update_data(chosen_datetime=chosen_datetime.strftime("%y-%m-%d %H:%M:%S"))
         customer = await Customer.query.where(Customer.phone == phone).gino.one_or_none()
         if customer:
             try:
-                await Timeslot.create(datetime=datetime.combine(chosen_date, chosen_time),
+                await Timeslot.create(datetime=chosen_datetime,
                                       is_free=False,
                                       customer_id=customer.id,
                                       master_id=data['master_id'])
@@ -200,7 +214,8 @@ async def phone_verification(message: Message, state: FSMContext):
 async def customer_name(message: Message, state: FSMContext):
     data = await state.get_data()
     customer = await Customer.create(name=message.text, phone=data['phone'])
-    await Timeslot.create(datetime=datetime.combine(data['chosen_date'], data['chosen_time']),
+    chosen_datetime = datetime.strptime(data['chosen_datetime'], "%y-%m-%d %H:%M:%S")
+    await Timeslot.create(datetime=chosen_datetime,
                           is_free=False,
                           customer_id=customer.id, master_id=data['master_id'])
     await message.answer(f"Done!", reply_markup=kb_master_commands)

@@ -12,9 +12,6 @@ kb_master_info = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="Back"),
         ],
-        [
-            KeyboardButton(text='Back')
-        ],
     ],
     resize_keyboard=True
 )

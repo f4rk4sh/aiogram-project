@@ -8,6 +8,6 @@ class AddMaster(StatesGroup):
     info = State()
 
 
-class DeleteMaster(StatesGroup):
+class FireMaster(StatesGroup):
     select = State()
     confirm = State()

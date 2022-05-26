@@ -13,7 +13,7 @@ async def notify_customer():
     visits = await Timeslot.query.where(Timeslot.datetime > datetime.now()).gino.all()
     in_an_hour = datetime.now() + timedelta(hours=1)
     for visit in visits:
-        if datetime.combine(visit.date, visit.time) <= in_an_hour:
+        if visit.datetime <= in_an_hour:
             customer = await Customer.query.where(Customer.id == visit.customer_id).gino.first()
             try:
                 await bot.send_message(chat_id=customer.chat_id,
