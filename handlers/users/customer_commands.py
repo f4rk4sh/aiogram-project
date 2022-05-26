@@ -315,4 +315,3 @@ async def photos_page_handler(call: CallbackQuery, callback_data: dict):
     photo_data = photos[page]
     photo = InputMedia(type='photo', media=photo_data.photo_id)
     await call.message.edit_media(photo, get_portfolio_photos_keyboard(photos, page))
-    await call.message.answer('Press <b>"Back" to main menu</b>', reply_markup=kb_back)
