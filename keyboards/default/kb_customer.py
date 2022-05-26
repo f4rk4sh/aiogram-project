@@ -9,6 +9,9 @@ kb_master_info = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="Book master"),
         ],
+        [
+            KeyboardButton(text='Back')
+        ],
     ],
     resize_keyboard=True
 )
@@ -34,6 +37,9 @@ kb_confirm_booking = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="Confirm booking"),
         ],
+        [
+            KeyboardButton(text='Cancel')
+        ],
     ],
     resize_keyboard=True
 )
@@ -42,6 +48,9 @@ kb_request_contact = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text="Send contact", request_contact=True)
+        ],
+        [
+            KeyboardButton(text='Cancel')
         ],
     ],
     resize_keyboard=True

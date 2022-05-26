@@ -1,9 +1,10 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from aiogram.dispatcher import FSMContext
 from aiogram.types import (CallbackQuery, InlineKeyboardButton,
                            InlineKeyboardMarkup, Message)
 from aiogram.utils.callback_data import CallbackData
+from aiogram.utils.exceptions import ChatNotFound
 
 from keyboards.default import kb_cancel_visit, kb_masters, kb_previous_visits
 from loader import bot, dp
@@ -22,11 +23,11 @@ async def customer_visits(message: Message, state: FSMContext = None):
     if visits:
         kb_visits = InlineKeyboardMarkup()
         for visit in visits:
-            if datetime.combine(visit.date, visit.time) > datetime.now():
+            if visit.datetime > datetime.now():
                 master = await Master.query.where(Master.id == visit.master_id).gino.first()
                 kb_visits.add(
                     InlineKeyboardButton(
-                        text=f'Date: {visit.date}, time: {visit.time.strftime("%H:%M")}',
+                        text=f'Date: {visit.datetime.strftime("%d.%m")}, time: {visit.datetime.strftime("%H:%M")}',
                         callback_data=portfolio_photos_callback.new(
                             visit_id=visit.id,
                             master_id=master.id
@@ -56,10 +57,11 @@ async def visit_detail(call: CallbackQuery, callback_data: dict, state: FSMConte
     await call.answer(cache_time=1)
     visit = await Timeslot.query.where(Timeslot.id == int(callback_data['visit_id'])).gino.first()
     master = await Master.query.where(Master.id == visit.master_id).gino.first()
-    text = f'<b>Master:</b> {master.name}\n' \
-           f'<b>Date:</b> {visit.date}\n' \
-           f'<b>Time:</b> {visit.time.strftime("%H:%M")}\n' \
+    text = f'<b>Master:</b> {master.name}\n'\
+           f'<b>Date:</b> {visit.datetime.strftime("%d.%m")}\n'\
+           f'<b>Time:</b> {visit.datetime.strftime("%H:%M")}\n' \
            f'<b>Master info:</b> {master.info}'
+
     if master.photo_id:
         await call.message.answer_photo(photo=master.photo_id, caption=text, reply_markup=kb_cancel_visit)
     else:
@@ -72,10 +74,14 @@ async def visit_detail(call: CallbackQuery, callback_data: dict, state: FSMConte
 async def visit_cancel(message: Message, state: FSMContext):
     data = await state.get_data()
     visit = await Timeslot.query.where(Timeslot.id == data['visit_id']).gino.first()
-    await bot.send_message(chat_id=data['master_chat_id'],
-                           text='<b>Notification:</b>\n\n'
-                                'Customer has been canceled his visit\n\n'
-                                f'Timeslot <b>{visit.date}, {visit.time.strftime("%H:%M")}</b> is now free')
+    try:
+        await bot.send_message(chat_id=data['master_chat_id'],
+                               text='<b>Notification:</b>\n\n'
+                                    'Customer has been canceled his visit\n\n'
+                                    f'Timeslot <b>{visit.datetime.strftime("%d.%m")}, {visit.datetime.strftime("%H:%M")}</b> is now free')
+    except ChatNotFound:
+        await message.answer("Master is unreachable")
+
     await visit.delete()
     await message.answer('Visit has been successfully canceled', reply_markup=kb_masters)
     await state.finish()
@@ -86,16 +92,16 @@ async def archive_visits(message: Message, state: FSMContext):
     data = await state.get_data()
     visits = await Timeslot.query.where(
         (Timeslot.customer_id == data['customer_id']) &
-        (Timeslot.date < date.today()) &
-        (Timeslot.time < datetime.now().time())
+        (Timeslot.datetime < datetime.now())
     ).gino.all()
     text = '<b>Previous visits:</b>'
     if visits:
         for visit in visits:
             master = await Master.query.where(Master.id == visit.master_id).gino.one_or_none()
             text += f'\n\n<b>Master:</b> {master.name}\n' \
-                    f'<b>Date:</b> {visit.date}\n' \
-                    f'<b>Time:</b> {visit.time.strftime("%H:%M")}'
+                    f'<b>Date:</b> {visit.datetime("%d.%m")}\n' \
+                    f'<b>Time:</b> {visit.datetime.strftime("%H:%M")}'
+
         await message.answer(text=text, reply_markup=kb_masters)
     else:
         await message.answer(text='Unfortunately, you have no  previous visits yet', reply_markup=kb_masters)
