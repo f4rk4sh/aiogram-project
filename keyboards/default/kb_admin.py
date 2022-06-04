@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 kb_admin_commands = ReplyKeyboardMarkup(
     keyboard=[

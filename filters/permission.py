@@ -12,4 +12,6 @@ class IsAdmin(BoundFilter):
 
 class IsMaster(BoundFilter):
     async def check(self, message: Message) -> bool:
-        return int(message.from_user.id) in [master.chat_id for master in await Master.query.gino.all() if master.is_active]
+        return int(message.from_user.id) in [
+            master.chat_id for master in await Master.all() if master.is_active
+        ]

@@ -1,56 +1,70 @@
-from utils.db_api.database import db
+from tortoise.models import Model
+from tortoise import fields, Tortoise
+
+from data.config import TORTOISE_ORM
 
 
-class Master(db.Model):
-    __tablename__ = 'master'
+class Master(Model):
+    id = fields.IntField(pk=True)
+    chat_id = fields.BigIntField(unique=True)
+    name = fields.CharField(max_length=100)
+    phone = fields.CharField(max_length=13)
+    info = fields.CharField(max_length=200)
+    photo_id = fields.CharField(max_length=200, null=True)
+    is_active = fields.BooleanField(default=True)
 
-    id = db.Column(db.Integer, primary_key=True)
-    chat_id = db.Column(db.BigInteger, unique=True)
-    name = db.Column(db.String(100))
-    phone = db.Column(db.String(13), unique=True)
-    info = db.Column(db.String(200))
-    photo_id = db.Column(db.String(200))
-    is_active = db.Column(db.Boolean, default=True)
-
-    def __repr__(self):
-        return f'<Master {self.id}>'
-
-
-class Customer(db.Model):
-    __tablename__ = 'customer'
-
-    id = db.Column(db.Integer, primary_key=True)
-    chat_id = db.Column(db.BigInteger, unique=True)
-    name = db.Column(db.String(100))
-    phone = db.Column(db.String(13), unique=True)
+    timeslots: fields.ReverseRelation["Timeslot"]
+    portfoliophotos: fields.ReverseRelation["PortfolioPhoto"]
 
     def __repr__(self):
-        return f'<Customer {self.id}>'
+        return f"<Master {self.id}>"
 
 
-class Timeslot(db.Model):
-    __tablename__ = 'timeslot'
-    __table_args__ = (db.UniqueConstraint('date', 'time', 'master_id'),
-                      db.UniqueConstraint('date', 'time', 'customer_id'),)
+class Customer(Model):
+    id = fields.IntField(pk=True)
+    chat_id = fields.BigIntField(unique=True, null=True)
+    name = fields.CharField(max_length=100)
+    phone = fields.CharField(max_length=13)
 
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date)
-    time = db.Column(db.Time)
-    datetime = db.Column(db.DateTime)
-    is_free = db.Column(db.Boolean, default=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id', ondelete='CASCADE'))
-    master_id = db.Column(db.Integer, db.ForeignKey('master.id', ondelete='SET NULL'))
+    timeslots: fields.ReverseRelation["Timeslot"]
 
     def __repr__(self):
-        return f'<Timeslot {self.id}>'
+        return f"<Customer {self.id}>"
 
 
-class PortfolioPhoto(db.Model):
-    __tablename__ = 'portfoliophoto'
+class Timeslot(Model):
+    id = fields.IntField(pk=True)
+    date = fields.DateField(null=True)
+    time = fields.TimeField(null=True)
+    datetime = fields.DatetimeField(null=True)
+    customer: fields.ForeignKeyRelation[Customer] = fields.ForeignKeyField(
+        "models.Customer", related_name="timeslots", ondelete=fields.CASCADE, null=True
+    )
+    master: fields.ForeignKeyRelation[Master] = fields.ForeignKeyField(
+        "models.Master", related_name="timeslots", ondelete=fields.CASCADE
+    )
 
-    id = db.Column(db.Integer, primary_key=True)
-    photo_id = db.Column(db.String(200))
-    master_id = db.Column(db.Integer, db.ForeignKey('master.id', ondelete='CASCADE'))
+    class Meta:
+        unique_together = (
+            ("date", "time", "master"),
+            ("date", "time", "customer"),
+        )
 
     def __repr__(self):
-        return f'<Portfolio photo {self.id}>'
+        return f"<Timeslot {self.id}>"
+
+
+class PortfolioPhoto(Model):
+    id = fields.IntField(pk=True)
+    photo_id = fields.CharField(max_length=200)
+    master: fields.ForeignKeyRelation[Master] = fields.ForeignKeyField(
+        "models.Master", related_name="portfoliophotos", ondelete=fields.CASCADE
+    )
+
+    def __repr__(self):
+        return f"<Portfolio photo {self.id}>"
+
+
+async def init_db():
+    await Tortoise.init(config=TORTOISE_ORM)
+    await Tortoise.generate_schemas()

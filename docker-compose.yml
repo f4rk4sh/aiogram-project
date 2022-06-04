@@ -7,8 +7,8 @@ services:
       - .:/src
     env_file:
       - .env
-    command: /bin/bash -c "pip install -r requirements.txt && python app.py"
-    depends_on:
+    command: /bin/bash -c "python app.py"
+    links:
       - db
 
   db:

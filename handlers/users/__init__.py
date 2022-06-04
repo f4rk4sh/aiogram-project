@@ -1,9 +1,11 @@
-from . import base_commands
-from . import customer_commands
-from . import send_notifications
-from . import manage_masters
-from . import master_profile
-from . import view_statistics
-from . import customer_visits
-from . import master_timetable
-from . import contact_info
+from . import (
+    base_commands,
+    contact_info,
+    customer_commands,
+    customer_visits,
+    manage_masters,
+    master_profile,
+    master_timetable,
+    send_notifications,
+    view_statistics,
+)
