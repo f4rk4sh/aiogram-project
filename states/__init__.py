@@ -1,6 +1,10 @@
-from .send_notification_states import SendNotification
-from .manage_masters_states import AddMaster, FireMaster
 from .choose_master_states import ChosenMaster
-from .master_profile_states import UpdateProfileInfo, UploadProfilePhoto, UploadPortfolioPhoto
+from .customer_visits_states import CancelVisit, CustomerVisits
+from .manage_masters_states import AddMaster, FireMaster
+from .master_profile_states import (
+    UpdateProfileInfo,
+    UploadPortfolioPhoto,
+    UploadProfilePhoto,
+)
 from .master_timetable_states import MasterTimetable
-from .customer_visits_states import CustomerVisits, CancelVisit
+from .send_notification_states import SendNotification

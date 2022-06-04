@@ -9,7 +9,7 @@ from aiogram.utils.exceptions import Throttled
 
 
 class ThrottlingMiddleware(BaseMiddleware):
-    def __init__(self, limit=5, key_prefix='antiflood_'):
+    def __init__(self, limit=5, key_prefix="antiflood_"):
         self.limit = limit
         self.prefix = key_prefix
         super(ThrottlingMiddleware, self).__init__()
@@ -28,13 +28,18 @@ class ThrottlingMiddleware(BaseMiddleware):
             raise CancelHandler()
 
     @staticmethod
-    async def target_throttled(target: Union[Message, CallbackQuery],
-                               throttled: Throttled, dispatcher: Dispatcher, key: str):
+    async def target_throttled(
+        target: Union[Message, CallbackQuery],
+        throttled: Throttled,
+        dispatcher: Dispatcher,
+        key: str,
+    ):
         message = target.message if isinstance(target, CallbackQuery) else target
         delta = throttled.rate - throttled.delta
         if throttled.exceeded_count == 2:
-            await message.reply(f'Too many requests!\n'
-                                f'This command is locked for {delta:.1f} sec.')
+            await message.reply(
+                f"Too many requests!\n" f"This command is locked for {delta:.1f} sec."
+            )
             return
         await asyncio.sleep(delta)
         thr = await dispatcher.check_key(key)
