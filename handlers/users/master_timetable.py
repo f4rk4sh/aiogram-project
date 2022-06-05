@@ -12,6 +12,7 @@ from aiogram.types import (
 from asyncpg import UniqueViolationError
 from tortoise.expressions import Q
 
+from data.messages import get_message
 from filters import IsMaster
 from keyboards.default import (
     kb_confirm_booking,
@@ -59,7 +60,7 @@ async def my_time_table(message: Message, state: FSMContext = None):
         last_day=last_day.strftime("%y-%m-%d %H:%M:%S"), master_pk=master.pk
     )
     await MasterTimetable.waiting_for_choosing_day.set()
-    await message.answer(f"Choose day", reply_markup=keyboard)
+    await message.answer(text=get_message("chose_day"), reply_markup=keyboard)
 
 
 @dp.callback_query_handler(
@@ -98,7 +99,7 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     await state.update_data(chosen_day=call.data, day_off=day_off)
     await MasterTimetable.waiting_for_choosing_time.set()
     await call.message.answer(
-        f"Here is your schedule on <b>{call.data}</b>", reply_markup=time_slot
+        text=get_message("day_schedule").format(call.data), reply_markup=time_slot
     )
 
 
@@ -186,7 +187,7 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     text_contains="busy", state=MasterTimetable.waiting_for_choosing_day
 )
 async def make_day_off(call: CallbackQuery, state: FSMContext):
-    await call.answer(text="This is your day off. Enjoy!", show_alert=True)
+    await call.answer(text=get_message("day_off_master_alert"), show_alert=True)
 
 
 @dp.callback_query_handler(
@@ -200,7 +201,9 @@ async def make_day_off(call: CallbackQuery, state: FSMContext):
         date=datetime.strptime(data["day_off"], "%y-%m-%d").date(),
         master=master,
     )
-    await call.message.answer("Done!", reply_markup=kb_master_commands)
+    await call.message.answer(
+        text=get_message("make_day_off_success"), reply_markup=kb_master_commands
+    )
 
 
 @dp.callback_query_handler(state=MasterTimetable.waiting_for_choosing_time)
@@ -211,10 +214,11 @@ async def book_or_cancel_time(call: CallbackQuery, state: FSMContext):
             await state.update_data(slot=call.data.split("_")[1])
             await MasterTimetable.waiting_for_cancellation.set()
             await call.message.answer(
-                "Do you want to cancel booking?", reply_markup=kb_master_cancel_booking
+                text=get_message("booking_cancel_confirmation"),
+                reply_markup=kb_master_cancel_booking,
             )
         else:
-            await call.answer(text="The timeslot is already booked", show_alert=True)
+            await call.answer(text=get_message("booked_alert"), show_alert=True)
     else:
         await call.answer(cache_time=1)
         data = await state.get_data()
@@ -225,8 +229,7 @@ async def book_or_cancel_time(call: CallbackQuery, state: FSMContext):
         )
         await MasterTimetable.waiting_for_confirmation.set()
         await call.message.answer(
-            f"You are trying to book {call.data}:00 timeslot.\n"
-            f'Press the <b>"Confirm booking"</b> or <b>"Cancel"</b>',
+            text=get_message("master_book_timeslot_confirmation").format(call.data),
             reply_markup=kb_confirm_booking,
         )
 
@@ -242,14 +245,14 @@ async def cancel_booking(message: Message, state: FSMContext):
     if visit.customer.chat_id:
         await bot.send_message(
             chat_id=visit.customer.chat_id,
-            text="<b>Notification:</b>\n\n"
-            "Master has canceled your visit on\n"
-            f'<b>{data["chosen_day"]}</b> at <b>{visit.datetime.strftime("%H:%M")}</b>',
+            text=get_message("master_visit_cancel_notification").format(
+                data["chosen_day"], visit.datetime.strftime("%H:%M")
+            ),
         )
         await sleep(0.3)
     await visit.delete()
     await message.answer(
-        "Visit has been successfully canceled", reply_markup=kb_master_commands
+        text=get_message("master_visit_cancel_success"), reply_markup=kb_master_commands
     )
     await state.finish()
 
@@ -259,58 +262,54 @@ async def cancel_booking(message: Message, state: FSMContext):
 )
 async def book_confirmation(message: Message, state: FSMContext):
     await message.answer(
-        f"Enter your phone number\n\n"
-        "<em>HINT: valid format 931234567. Don't enter +380 </em>",
+        text=get_message("set_phone"),
         reply_markup=ReplyKeyboardRemove(),
     )
 
 
-@dp.message_handler(state=MasterTimetable.waiting_for_confirmation)
+@dp.message_handler(
+    regexp=r"\+380\d{9}", state=MasterTimetable.waiting_for_confirmation
+)
 async def phone_verification(message: Message, state: FSMContext):
-    if (
-        len(message.text) != 9
-        or message.text.startswith(("+", "0"))
-        or not message.text.isnumeric()
-    ):
-        await message.answer(f"Wrong number. Try again")
-    else:
-        data = await state.get_data()
-        phone = "+380" + message.text
-        chosen_datetime = datetime(
-            year=datetime.now().year,
-            month=int(data["selected_date"].split(".")[1]),
-            day=int(data["selected_date"].split(".")[0]),
-            hour=data["selected_time"],
-            minute=0,
-            second=0,
-        )
-        await state.update_data(
-            chosen_datetime=chosen_datetime.strftime("%y-%m-%d %H:%M:%S")
-        )
-        customer = await Customer.get_or_none(phone=phone)
-        master = await Master.get(pk=data["master_pk"])
-        if customer:
-            try:
-                await Timeslot.create(
-                    datetime=chosen_datetime,
-                    customer=customer,
-                    master=master,
-                )
-                await message.answer(f"Done!", reply_markup=kb_master_commands)
-                await state.finish()
-            except UniqueViolationError:
-                await message.answer(
-                    text=f"<b>Alert:</b>\n\n"
-                    "Customer already has visit at this time!\n"
-                    "Please, chose another timeslot",
-                    reply_markup=kb_master_commands,
-                )
-        else:
-            await state.update_data(phone=phone)
-            await MasterTimetable.waiting_for_new_customer_name.set()
-            await message.answer(
-                "Please enter customers name", reply_markup=ReplyKeyboardRemove()
+    data = await state.get_data()
+    chosen_datetime = datetime(
+        year=datetime.now().year,
+        month=int(data["selected_date"].split(".")[1]),
+        day=int(data["selected_date"].split(".")[0]),
+        hour=data["selected_time"],
+        minute=0,
+        second=0,
+    )
+    await state.update_data(
+        chosen_datetime=chosen_datetime.strftime("%y-%m-%d %H:%M:%S")
+    )
+    customer = await Customer.get_or_none(phone=message.text)
+    master = await Master.get(pk=data["master_pk"])
+    if customer:
+        try:
+            await Timeslot.create(
+                datetime=chosen_datetime,
+                customer=customer,
+                master=master,
             )
+            await message.answer(
+                text=get_message("book_timeslot_success").format(
+                    customer.name, data["selected_date"], data["selected_time"]
+                ),
+                reply_markup=kb_master_commands,
+            )
+            await state.finish()
+        except UniqueViolationError:
+            await message.answer(
+                text=get_message("customer_duplicate_booking_alert"),
+                reply_markup=kb_master_commands,
+            )
+    else:
+        await state.update_data(phone=message.text)
+        await MasterTimetable.waiting_for_new_customer_name.set()
+        await message.answer(
+            text=get_message("set_customer_name"), reply_markup=ReplyKeyboardRemove()
+        )
 
 
 @dp.message_handler(
@@ -326,5 +325,10 @@ async def customer_name(message: Message, state: FSMContext):
         customer=customer,
         master=master,
     )
-    await message.answer(f"Done!", reply_markup=kb_master_commands)
+    await message.answer(
+        text=get_message("book_timeslot_success").format(
+            customer.name, data["selected_date"], data["selected_time"]
+        ),
+        reply_markup=kb_master_commands,
+    )
     await state.finish()

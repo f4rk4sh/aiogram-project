@@ -13,6 +13,7 @@ from aiogram.types import (
 from aiogram.utils.exceptions import ChatNotFound
 from asyncpg import UniqueViolationError
 
+from data.messages import get_message
 from keyboards.default import (
     kb_confirm_booking,
     kb_master_info,
@@ -27,7 +28,7 @@ from utils.misc import date_span
 
 
 @dp.message_handler(text=["List of our masters", "/masters"], state="*")
-async def list_of_masters(message: Message, state: FSMContext = None):
+async def master_list(message: Message, state: FSMContext = None):
     if state:
         await state.finish()
     masters = await Master.filter(is_active=True)
@@ -39,12 +40,12 @@ async def list_of_masters(message: Message, state: FSMContext = None):
             )
         await ChosenMaster.waiting_for_choosing_master.set()
         await message.answer(
-            "<b>Here are our best masters!</b>\n" "Please chose one",
+            text=get_message("master_list"),
             reply_markup=kb_master_list,
         )
     else:
         await message.answer(
-            "Unfortunately, there are no masters added yet", reply_markup=kb_masters
+            text=get_message("no_masters_alert"), reply_markup=kb_masters
         )
 
 
@@ -56,18 +57,17 @@ async def chosen_master(call: CallbackQuery, state: FSMContext):
         master_pk=int(call.data), master_name=master.name, master_info=master.info
     )
     await ChosenMaster.waiting_for_choosing_booking_or_portfolio.set()
-    text = (
-        f"<b>Name:</b> {master.name}\n"
-        f"<b>Info:</b> {master.info}\n\n"
-        'Please take a look on the masters best works by pressing the <b>"Portfolio"</b> button.\n\n'
-        'If you want to book this Master, please, press <b>"Book master"</b> button.'
-    )
     if master.photo_id:
         await call.message.answer_photo(
-            master.photo_id, caption=text, reply_markup=kb_master_info
+            photo=master.photo_id,
+            caption=get_message("chosen_master").format(master.name, master.info),
+            reply_markup=kb_master_info,
         )
     else:
-        await call.message.answer(text=text, reply_markup=kb_master_info)
+        await call.message.answer(
+            text=get_message("chosen_master").format(master.name, master.info),
+            reply_markup=kb_master_info,
+        )
 
 
 @dp.message_handler(
@@ -121,8 +121,7 @@ async def book_master(message: Message, state: FSMContext):
     await state.update_data(last_day=last_day.strftime("%y-%m-%d %H:%M:%S"))
     await ChosenMaster.waiting_for_choosing_date.set()
     await message.answer(
-        f"You have decided to book <b>{data['master_name'].capitalize()}</b>\n"
-        f"Please choose the day!",
+        text=get_message("book_master").format(data["master_name"]),
         reply_markup=keyboard,
     )
 
@@ -166,10 +165,7 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     await state.update_data(chosen_day=call.data)
     await ChosenMaster.waiting_for_choosing_time.set()
     await call.message.answer(
-        f"<b>Note:</b>\n\n"
-        f"You are trying to view available slots on\n"
-        f"<b>{call.data}</b> for <b>{data['master_name'].capitalize()}</b>\n"
-        f"Please, select the available one!",
+        text=get_message("book_day").format(call.data, data["master_name"]),
         reply_markup=time_slot,
     )
 
@@ -179,7 +175,7 @@ async def back_to_masters(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=1)
     gotten_sate = await state.get_state()
     if gotten_sate.split(":")[1] == "waiting_for_choosing_date":
-        await list_of_masters(call.message)
+        await master_list(call.message)
     else:
         await book_master(message=call.message, state=state)
 
@@ -193,7 +189,7 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     if call.data == "Previous week" and datetime.now() > datetime.strptime(
         data.get("first_day"), "%y-%m-%d %H:%M:%S"
     ):
-        await call.answer(text="You can't navigate to the past", show_alert=True)
+        await call.answer(text=get_message("navigate_to_past_alert"), show_alert=True)
     elif call.data == "Previous week":
         keyboard = InlineKeyboardMarkup()
         async for time_inc in date_span(
@@ -282,13 +278,13 @@ async def book_day(call: CallbackQuery, state: FSMContext):
     text_contains="busy", state=ChosenMaster.waiting_for_choosing_date
 )
 async def make_day_off(call: CallbackQuery, state: FSMContext):
-    await call.answer(text="This is the masters day off.", show_alert=True)
+    await call.answer(text=get_message("day_off_alert"), show_alert=True)
 
 
 @dp.callback_query_handler(state=ChosenMaster.waiting_for_choosing_time)
 async def book_time(call: CallbackQuery, state: FSMContext):
     if call.data == "booked":
-        await call.answer(text="The timeslot is already booked", show_alert=True)
+        await call.answer(text=get_message("booked_alert"), show_alert=True)
     else:
         await call.answer(cache_time=1)
         data = await state.get_data()
@@ -299,11 +295,9 @@ async def book_time(call: CallbackQuery, state: FSMContext):
         )
         await ChosenMaster.waiting_for_confirmation.set()
         await call.message.answer(
-            f"<b>Alert:</b>\n\n"
-            f"You are trying to book <b>{data['master_name'].capitalize()}</b> on "
-            f"<b>{data['chosen_day']}</b> at <b>{call.data}:00</b>\n"
-            f"Press the <b>'Confirm booking'</b> to proceed\n"
-            f"or <b>'Cancel'</b> if you want to abort booking.",
+            text=get_message("book_confirmation").format(
+                data["master_name"], data["chosen_day"], call.data
+            ),
             reply_markup=kb_confirm_booking,
         )
 
@@ -328,37 +322,34 @@ async def book_confirmation(message: Message, state: FSMContext):
                 master=master,
             )
             await message.answer(
-                f"<b>You have successfully booked {master.name}!</b>\n"
-                f'Pleased to see you on {data["chosen_day"]} at {data["selected_time"]}:00.',
+                text=get_message("book_success").format(
+                    master.name, data["chosen_day"], data["selected_time"]
+                ),
                 reply_markup=kb_masters,
             )
             try:
                 await bot.send_message(
                     chat_id=master.chat_id,
-                    text="<b>Notification:</b>\n\n"
-                    f"You have gotten a new booking\n\n"
-                    f'<b>Date:</b> {data["chosen_day"]}\n'
-                    f'<b>Time:</b> {data["selected_time"]}:00\n'
-                    f"<b>Customer:</b> {customer.name.capitalize()}, {customer.phone}",
+                    text=get_message("book_master_notification").format(
+                        data["chosen_day"],
+                        data["selected_time"],
+                        customer.name,
+                        customer.phone,
+                    ),
                 )
                 await sleep(0.3)
             except ChatNotFound:
                 logging.info(f"ChatNotFound: chat id - {master.chat_id}")
-                await message.answer(
-                    f"<b>Alert:</b>\n\n"
-                    f"Notification has not been sent! Masters telegram account is unavailable. Please call us."
-                )
+                await message.answer(get_message("no_master_chat_id_alert"))
             await state.finish()
         except UniqueViolationError:
             await message.answer(
-                text=f"<b>Alert:</b>\n\n"
-                "You already have visit at this time! Go to your visits for more details.\n"
-                "Please, chose another timeslot",
+                text=get_message("duplicate_booking_alert"),
                 reply_markup=kb_masters,
             )
     else:
         await message.answer(
-            f'Please send us your phone number by pressing <b>"Send contact"</b> button',
+            text=get_message("send_contact"),
             reply_markup=kb_request_contact,
         )
 
@@ -395,23 +386,23 @@ async def phone_verification(message: Message, state: FSMContext):
         customer=customer,
         master=master,
     )
-    await message.answer(f"Done!", reply_markup=kb_masters)
+    await message.answer(
+        text=get_message("book_success").format(
+            master.name, chosen_date, data["selected_time"]
+        ),
+        reply_markup=kb_masters,
+    )
     try:
         await bot.send_message(
             chat_id=master.chat_id,
-            text="<b>Notification:</b>\n\n"
-            f"You have gotten a new booking\n\n"
-            f'<b>Date:</b> {data["chosen_day"]}\n'
-            f'<b>Time:</b> {data["selected_time"]}:00\n'
-            f"<b>Customer:</b> {customer.name.capitalize()}, {phone}",
+            text=get_message("book_master_notification").format(
+                data["chosen_day"], data["selected_time"], customer.name, customer.phone
+            ),
         )
         await sleep(0.3)
     except ChatNotFound:
         logging.info(f"ChatNotFound: chat id - {master.chat_id}")
-        await message.answer(
-            f"<b>Alert:</b>\n\n"
-            f"Notification has not been sent! Masters telegram account is unavailable. Please call us."
-        )
+        await message.answer(get_message("no_master_chat_id_alert"))
     await state.finish()
 
 
@@ -430,7 +421,7 @@ async def portfolio(message: Message, state: FSMContext):
         )
     else:
         await message.answer(
-            f'{data["master_name"]} has no portfolio photos yet',
+            text=get_message("no_portfolio_photos_alert").format(data["master_name"]),
             reply_markup=kb_masters,
         )
 

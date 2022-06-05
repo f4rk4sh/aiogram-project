@@ -5,6 +5,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.utils.exceptions import ChatNotFound
 
+from data.messages import get_message
 from filters import IsAdmin
 from keyboards.default import kb_admin_commands, kb_recipients
 from keyboards.inline import kb_inform_confirm
@@ -17,7 +18,9 @@ from utils.db_api.models import Customer, Master
 async def set_recipients(message: Message, state: FSMContext = None):
     if state:
         await state.finish()
-    await message.answer("Select recipients", reply_markup=kb_recipients)
+    await message.answer(
+        text=get_message("select_recipients"), reply_markup=kb_recipients
+    )
     await SendNotification.recipients.set()
 
 
@@ -28,8 +31,7 @@ async def set_recipients(message: Message, state: FSMContext = None):
 async def set_notification(message: Message, state: FSMContext):
     await state.update_data(recipients=message.text)
     await message.answer(
-        text="Enter the text of the notification\n\n"
-        "<em>HINT: can not be a command</em>",
+        text=get_message("set_notification"),
         reply_markup=ReplyKeyboardRemove(),
     )
     await SendNotification.notification.set()
@@ -39,9 +41,7 @@ async def set_notification(message: Message, state: FSMContext):
 async def check_notification(message: Message, state: FSMContext):
     await state.update_data(notification=message.text)
     await message.answer(
-        text="Your notification is:\n\n"
-        f'<em><b>"{message.text}"</b></em>\n\n'
-        "Send this notification?",
+        text=get_message("check_notification").format(message.text),
         reply_markup=kb_inform_confirm,
     )
     await SendNotification.confirm.set()
@@ -51,7 +51,7 @@ async def check_notification(message: Message, state: FSMContext):
 async def change_notification(call: CallbackQuery):
     await call.answer(cache_time=1)
     await call.message.edit_reply_markup()
-    await call.message.answer("Please, re-enter the text of the notification")
+    await call.message.answer(text=get_message("change_notification"))
     await SendNotification.notification.set()
 
 
@@ -71,19 +71,18 @@ async def confirm_notification(call: CallbackQuery, state: FSMContext):
         try:
             await bot.send_message(
                 chat_id=recipient.chat_id,
-                text="<b>Notification from administrator:</b>\n\n"
-                f'<em>"{data["notification"]}"</em>\n\n'
-                "Wish you a good day!",
+                text=get_message("admin_notification").format(data["notification"]),
             )
             await sleep(0.3)
         except ChatNotFound:
             logging.info(f"ChatNotFound: chat id - {recipient.chat_id}")
             await call.message.answer(
-                f"<b>Alert:</b>\n\n"
-                f"Notification has not been sent to <b>{recipient.name}</b>, phone number: <b>{recipient.phone}</b>"
+                text=get_message("admin_no_chat_id_alert").format(
+                    recipient.name, recipient.phone
+                )
             )
     await call.message.answer(
-        "Main menu, choose one of the available commands 👇",
+        text=get_message("menu"),
         reply_markup=kb_admin_commands,
     )
     await state.finish()
