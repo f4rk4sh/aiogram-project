@@ -6,6 +6,7 @@ import aioschedule
 from aiogram.utils.exceptions import ChatNotFound
 
 from data.config import ADMINS
+from data.messages import get_message
 from loader import bot
 from utils.db_api.models import Timeslot
 
@@ -18,9 +19,7 @@ async def notify_customer():
             try:
                 await bot.send_message(
                     chat_id=visit.customer.chat_id,
-                    text="<b>Reminder:</b>\n\n"
-                    "You have upcoming visit in half an hour\n\n"
-                    "We are looking forward to meeting you!",
+                    text=get_message("customer_reminder"),
                 )
                 await sleep(0.3)
             except ChatNotFound:
@@ -28,9 +27,9 @@ async def notify_customer():
                 for admin in ADMINS:
                     await bot.send_message(
                         chat_id=admin,
-                        text="<b>Alert:</b>\n\n"
-                        f"Reminder has not been sent to <b>{visit.customer.name}</b>, "
-                        f"phone number: <b>{visit.customer.phone}</b>",
+                        text=get_message("alert_reminder_no_chat_id").format(
+                            visit.customer.name, visit.customer.phone
+                        ),
                     )
                     await sleep(0.3)
 

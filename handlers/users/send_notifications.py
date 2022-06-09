@@ -5,11 +5,12 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.utils.exceptions import ChatNotFound
 
+from data.messages import get_message
 from filters import IsAdmin
-from keyboards.default import kb_admin_commands, kb_recipients
-from keyboards.inline import kb_inform_confirm
+from keyboards.default.kb_admin import kb_recipients, kb_admin_commands
+from keyboards.inline.kb_inline_admin import kb_inform_confirm
 from loader import bot, dp
-from states import SendNotification
+from states.admin_states import SendNotification
 from utils.db_api.models import Customer, Master
 
 
@@ -17,45 +18,44 @@ from utils.db_api.models import Customer, Master
 async def set_recipients(message: Message, state: FSMContext = None):
     if state:
         await state.finish()
-    await message.answer("Select recipients", reply_markup=kb_recipients)
-    await SendNotification.recipients.set()
+    await message.answer(
+        text=get_message("select_recipients"), reply_markup=kb_recipients
+    )
+    await SendNotification.recipients_selected.set()
 
 
 @dp.message_handler(
     text=["Inform masters", "Inform customers", "Inform both masters and customers"],
-    state=SendNotification.recipients,
+    state=SendNotification.recipients_selected,
 )
 async def set_notification(message: Message, state: FSMContext):
     await state.update_data(recipients=message.text)
     await message.answer(
-        text="Enter the text of the notification\n\n"
-        "<em>HINT: can not be a command</em>",
+        text=get_message("set_notification"),
         reply_markup=ReplyKeyboardRemove(),
     )
-    await SendNotification.notification.set()
+    await SendNotification.notification_typed.set()
 
 
-@dp.message_handler(regexp=r"^[^\/].+$", state=SendNotification.notification)
+@dp.message_handler(regexp=r"^[^\/].+$", state=SendNotification.notification_typed)
 async def check_notification(message: Message, state: FSMContext):
     await state.update_data(notification=message.text)
     await message.answer(
-        text="Your notification is:\n\n"
-        f'<em><b>"{message.text}"</b></em>\n\n'
-        "Send this notification?",
+        text=get_message("check_notification").format(message.text),
         reply_markup=kb_inform_confirm,
     )
-    await SendNotification.confirm.set()
+    await SendNotification.confirm_selected.set()
 
 
-@dp.callback_query_handler(text_contains="change", state=SendNotification.confirm)
+@dp.callback_query_handler(text_contains="change", state=SendNotification.confirm_selected)
 async def change_notification(call: CallbackQuery):
     await call.answer(cache_time=1)
     await call.message.edit_reply_markup()
-    await call.message.answer("Please, re-enter the text of the notification")
-    await SendNotification.notification.set()
+    await call.message.answer(text=get_message("change_notification"))
+    await SendNotification.notification_typed.set()
 
 
-@dp.callback_query_handler(text_contains="confirm", state=SendNotification.confirm)
+@dp.callback_query_handler(text_contains="confirm", state=SendNotification.confirm_selected)
 async def confirm_notification(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=1)
     data = await state.get_data()
@@ -71,19 +71,18 @@ async def confirm_notification(call: CallbackQuery, state: FSMContext):
         try:
             await bot.send_message(
                 chat_id=recipient.chat_id,
-                text="<b>Notification from administrator:</b>\n\n"
-                f'<em>"{data["notification"]}"</em>\n\n'
-                "Wish you a good day!",
+                text=get_message("admin_notification").format(data["notification"]),
             )
             await sleep(0.3)
         except ChatNotFound:
             logging.info(f"ChatNotFound: chat id - {recipient.chat_id}")
             await call.message.answer(
-                f"<b>Alert:</b>\n\n"
-                f"Notification has not been sent to <b>{recipient.name}</b>, phone number: <b>{recipient.phone}</b>"
+                text=get_message("alert_no_recipient_chat_id").format(
+                    recipient.name, recipient.phone
+                )
             )
     await call.message.answer(
-        "Main menu, choose one of the available commands 👇",
+        text=get_message("menu"),
         reply_markup=kb_admin_commands,
     )
     await state.finish()
