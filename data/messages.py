@@ -2,15 +2,12 @@ MESSAGES = {
 
     # base_commands
 
-    'start': "Glad to see you, {}!\n"
+    'start': "Glad to see you!\n"
              "Select one of the available commands 👇",
-
-    'start_customer': "Glad to see you!\n"
-                      "Please, check out our professional masters 👇 \n",
 
     'menu': "Main menu, choose one of the available commands 👇",
 
-    'help_admin': "<b>Available commands</b>\n\n"
+    'help_admin': "<b>Available commands<b>\n\n"
                   "<b>Send notifications:</b>\n\n"
                   "/inform - <em>send notification to masters and/or customers</em>\n\n"
                   "<b>Manage masters:</b>\n\n"
@@ -44,78 +41,78 @@ MESSAGES = {
 
     # customer_commands
 
-    'master_list': "<b>Here are our masters!</b>\n"
-                   "Please chose one",
+    'master_list': "<b>Chose one of the available masters</b>\n",
 
-    'no_masters_alert': "Unfortunately, there are no masters added yet",
+    'alert_no_master': "Unfortunately, there are no masters added yet",
 
-    'chosen_master': "<b>Name:</b> {}\n"
-                     "<b>Info:</b> {}\n\n"
-                     'Please take a look on the masters best works by pressing the <b>"Portfolio"</b> button.\n\n'
-                     'If you want to book this Master, please, press <b>"Book master"</b> button.',
+    'master_info': "<b>Name:</b> {}\n"
+                   "<b>Info:</b> {}\n\n"
+                   'Please take a look on the masters best works by pressing the <b>"Portfolio"</b> button\n\n'
+                   'If you want to book this Master, please, press <b>"Book master"</b> button',
 
-    'book_master': "You have decided to book <b>{}</b>\n"
-                   "Please choose the day!",
+    'set_day': "You have decided to book <b>{}</b>\n"
+               "Please choose the day!",
 
-    'book_day': "<b>Note:</b>\n\n"
+    'set_time': "<b>Note:</b>\n\n"
                 "You are trying to view available slots on\n"
                 "<b>{}</b> for <b>{}</b>\n"
                 "Please, select the available one!",
 
-    'navigate_to_past_alert': "You can't navigate to the past",
+    'alert_past': "You can't navigate to the past",
 
-    'day_off_alert': "This is the masters day off",
+    'alert_day_off': "This is masters day off",
 
-    'booked_alert': "The timeslot is already booked",
+    'alert_booked': "This timeslot is already booked",
 
-    'book_confirmation': "<b>Alert:</b>\n\n"
-                         "You are trying to book <b>{}</b> on "
-                         "<b>{}</b> at <b>{}:00</b>\n"
-                         'Press the <b>"Confirm booking"</b> to proceed\n'
-                         'or <b>"Cancel"</b> if you want to abort booking',
+    'confirm_booking': "<b>Alert:</b>\n\n"
+                       "You are trying to book <b>{}</b> on "
+                       "<b>{}</b> at <b>{}:00</b>\n"
+                       'Press the <b>"Confirm booking"</b> to proceed\n'
+                       'or <b>"Cancel"</b> if you want to abort booking',
 
     'book_success': "<b>You have successfully booked {}!</b>\n"
                     "Pleased to see you on {} at {}:00",
 
-    'book_master_notification': "<b>Notification:</b>\n\n"
-                                "You have gotten a new booking\n\n"
-                                "<b>Date:</b> {}\n"
-                                "<b>Time:</b> {}:00\n"
-                                "<b>Customer:</b> {}, {}",
+    'book_notify_master': "<b>Notification:</b>\n\n"
+                          "You have gotten a new booking\n\n"
+                          "<b>Date:</b> {}\n"
+                          "<b>Time:</b> {}:00\n"
+                          "<b>Customer:</b> {}, {}",
 
-    'no_master_chat_id_alert': "<b>Alert:</b>\n\n"
-                               "Notification has not been sent! Masters telegram account is unavailable. Please call us",
+    'alert_no_master_chat_id': "<b>Alert:</b>\n\n"
+                               "Notification has not been sent! Masters telegram account is unavailable. "
+                               "Please call us {}",
 
-    'duplicate_booking_alert': "<b>Alert:</b>\n\n"
-                               "You already have visit at this time! Go to your visits for more details.\n"
-                               "Please, chose another timeslot",
+    'alert_duplication': "<b>Alert:</b>\n\n"
+                         "You already have visit at this time! Browse your visits for more details\n"
+                         "Please, chose another timeslot",
 
     'send_contact': 'Please send us your phone number by pressing <b>"Send contact"</b> button',
 
-    'no_portfolio_photos_alert': '{} has no portfolio photos yet',
+    'alert_no_photos': '{} has no portfolio photos yet',
 
     # customer_visits
 
     'upcoming_visits': "<b>Upcoming visits:</b>\n\n"
                        "<em>HINT: if you want to view details or cancel upcoming visit, click on needed one</em>",
 
-    'no_upcoming_visits': "Unfortunately, you have no upcoming visits\n\n {}",
+    'alert_no_upcoming_visits': "Unfortunately, you have no upcoming visits\n\n {}",
 
     'archive': 'Press <b>"Archive"</b> to view previous visits\n\n'
                'Press <b>"Back"</b> to main menu',
 
-    'no_visits': "Unfortunately, you have no visits yet",
+    'alert_no_visits': "Unfortunately, you have no visits yet",
 
     'visit_detail': "<b>Master:</b> {}\n"
                     "<b>Date:</b> {}\n"
                     "<b>Time:</b> {}\n"
                     "<b>Master info:</b> {}",
 
-    'visit_cancel_notification': "<b>Notification:</b>\n\n"
-                                 "Customer has been canceled his visit\n\n"
-                                 "Timeslot <b>{}, {}</b> is now free",
+    'visit_cancel_notify_master': "<b>Notification:</b>\n\n"
+                                  "Customer has been canceled his visit\n\n"
+                                  "Timeslot <b>{}, {}</b> is now free",
 
-    'visit_cancel_no_master_chat_id_alert': "<b>Alert:</b>\n\n"
+    'alert_visit_cancel_no_master_chat_id': "<b>Alert:</b>\n\n"
                                             "Notification about visit cancellation has not been "
                                             "sent to <b>{}</b> automatically\n\n"
                                             "Please, call <b>{}</b> to inform us about cancellation",
@@ -128,7 +125,7 @@ MESSAGES = {
                             "<b>Date:</b> {}\n"
                             "<b>Time:</b> {}",
 
-    'no_previous_visits': "Unfortunately, you have no previous visits yet",
+    'alert_no_previous_visits': "Unfortunately, you have no previous visits yet",
 
     # manage_masters
 
@@ -137,8 +134,8 @@ MESSAGES = {
     'set_chat_id': "Enter master's telegram chat id\n\n"
                    "<em>HINT: use only numbers</em>",
 
-    'reinstate_notification': "<b>Notification:</b>\n\n"
-                              "You have reinstate a fired employee",
+    'reinstate': "<b>Notification:</b>\n\n"
+                 "You have reinstate a fired employee",
 
     'set_name': "Enter master's full name\n\n"
                 "<em>HINT: need to contain firstname and lastname</em>",
@@ -154,15 +151,15 @@ MESSAGES = {
 
     'select_master': "Select the master you want to fire",
 
-    'fire_confirmation': "Do you really want to fire this master?",
+    'fire_confirm': "Do you really want to fire this master?",
 
-    'fire_master_notification': "<b>Notification:</b>\n\n"
-                                "The master {} is no longer working in our salon.\n"
-                                "For this reason all your visits to this master were cancelled.\n"
-                                "Please choose another one and book him.\n\n"
-                                "We apologize for the inconvenience.",
+    'fire_notify_customer': "<b>Notification:</b>\n\n"
+                            "The master {} is no longer working in our salon.\n"
+                            "For this reason all your visits to this master were cancelled.\n"
+                            "Please choose another one and book him.\n\n"
+                            "We apologize for the inconvenience.",
 
-    'fire_master_no_chat_id_alert': "<b>Alert:</b>\n\n"
+    'alert_fire_no_master_chat_id': "<b>Alert:</b>\n\n"
                                     "Notification about visits cancellation due to the dismissal of the "
                                     "master has not been sent to <b>{}, "
                                     "phone number: {} </b> automatically.",
@@ -187,28 +184,28 @@ MESSAGES = {
 
     # master_timetable
 
-    'chose day': "Choose day to view your schedule",
+    'set_day_master': "Choose day to view your schedule",
 
     'day_schedule': "Here is your schedule on <b>{}</b>",
 
-    'day_off_master_alert': "This is your day off. Enjoy!",
+    'alert_day_off_master': "This is your day off. Enjoy!",
 
     'make_day_off_success': "You have successfully made day off! Enjoy it",
 
-    'booking_cancel_confirmation': "Do you want to cancel booking?",
+    'cancel_booking_confirm': "Do you want to cancel booking?",
 
-    'master_book_timeslot_confirmation': "You are trying to book {}:00 timeslot.\n"
-                                'Press the <b>"Confirm booking"</b> or <b>"Cancel"</b>',
+    'master_book_timeslot_confirm': "You are trying to book {}:00 timeslot.\n"
+                                    'Press the <b>"Confirm booking"</b> or <b>"Cancel"</b>',
 
-    'master_visit_cancel_notification': "<b>Notification:</b>\n\n"
+    'master_visit_cancel_notify_customer': "<b>Notification:</b>\n\n"
                                         "Master has canceled your visit on\n"
                                         "<b>{}</b> at <b>{}</b>",
 
     'master_visit_cancel_success': "Visit has been successfully canceled",
 
-    'customer_duplicate_booking_alert': "<b>Alert:</b>\n\n"
-                                        "Customer already has visit at this time!\n"
-                                        "Please, chose another timeslot",
+    'customer_duplication_alert': "<b>Alert:</b>\n\n"
+                                  "Customer already has visit at this time!\n"
+                                  "Please, chose another timeslot",
 
     'set_customer_name': "Please enter customers name",
 
@@ -232,7 +229,7 @@ MESSAGES = {
                           '<em>"{}"</em>\n\n'
                           "Wish you a good day!",
 
-    'admin_no_chat_id_alert': "<b>Alert:</b>\n\n"
+    'alert_no_recipient_chat_id': "<b>Alert:</b>\n\n"
                               "Notification has not been sent to <b>{}</b>, phone number: <b>{}</b>",
 
     # other
@@ -243,7 +240,7 @@ MESSAGES = {
                          "You have upcoming visit in half an hour\n\n"
                          "We are looking forward to meeting you!",
 
-    'reminder_no_chat_id_alert': "<b>Alert:</b>\n\n"
+    'alert_reminder_no_chat_id': "<b>Alert:</b>\n\n"
                                  "Reminder has not been sent to <b>{}</b>, "
                                  "phone number: <b>{}</b>",
 }

@@ -14,10 +14,10 @@ from tortoise.expressions import Q
 
 from data.messages import get_message
 from filters import IsAdmin
-from keyboards.default import kb_admin_commands, kb_manage_masters
-from keyboards.inline import kb_delete_confirm
+from keyboards.default.kb_admin import kb_manage_masters, kb_admin_commands
+from keyboards.inline.kb_inline_admin import kb_delete_confirm
 from loader import bot, dp
-from states import AddMaster, FireMaster
+from states.admin_states import AddMaster, FireMaster
 from utils.db_api.models import Customer, Master, Timeslot
 
 
@@ -36,41 +36,41 @@ async def set_chat_id(message: Message, state: FSMContext):
         text=get_message("set_chat_id"),
         reply_markup=ReplyKeyboardRemove(),
     )
-    await AddMaster.chat_id.set()
+    await AddMaster.chat_id_typed.set()
 
 
-@dp.message_handler(regexp=r"^\d+$", state=AddMaster.chat_id)
+@dp.message_handler(regexp=r"^\d+$", state=AddMaster.chat_id_typed)
 async def set_name(message: Message, state: FSMContext):
     master = await Master.get_or_none(chat_id=int(message.text))
     if master:
         master.is_active = True
         await master.save()
         await message.answer(
-            get_message("reinstate_notification"),
+            get_message("reinstate"),
             reply_markup=kb_admin_commands,
         )
         await state.finish()
     else:
         await state.update_data(chat_id=int(message.text))
         await message.answer(text=get_message("set_name"))
-        await AddMaster.name.set()
+        await AddMaster.name_typed.set()
 
 
-@dp.message_handler(regexp=r"^\S+\s\S+$", state=AddMaster.name)
+@dp.message_handler(regexp=r"^\S+\s\S+$", state=AddMaster.name_typed)
 async def set_phone(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     await message.answer(text=get_message("set_phone"))
-    await AddMaster.phone.set()
+    await AddMaster.phone_typed.set()
 
 
-@dp.message_handler(regexp=r"\+380\d{9}", state=AddMaster.phone)
+@dp.message_handler(regexp=r"\+380\d{9}", state=AddMaster.phone_typed)
 async def set_info(message: Message, state: FSMContext):
     await state.update_data(phone=message.text)
     await message.answer(text=get_message("set_info"))
-    await AddMaster.info.set()
+    await AddMaster.info_typed.set()
 
 
-@dp.message_handler(regexp=r"^[^\/].{1,200}$", state=AddMaster.info)
+@dp.message_handler(regexp=r"^[^\/].{1,200}$", state=AddMaster.info_typed)
 async def add_master(message: Message, state: FSMContext):
     data = await state.get_data()
     await Master.create(info=message.text, **data)
@@ -95,26 +95,26 @@ async def select_master(message: Message, state: FSMContext):
         await message.answer(
             text=get_message("select_master"), reply_markup=kb_master_list
         )
-        await FireMaster.select.set()
+        await FireMaster.master_selected.set()
     else:
         await message.answer(
-            text=get_message("no_masters_alert"),
+            text=get_message("alert_no_master"),
             reply_markup=kb_admin_commands,
         )
         await state.finish()
 
 
-@dp.callback_query_handler(state=FireMaster.select)
+@dp.callback_query_handler(state=FireMaster.master_selected)
 async def check_master(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=1)
     await state.update_data(master_pk=int(call.data))
     await call.message.answer(
-        text=get_message("fire_confirmation"), reply_markup=kb_delete_confirm
+        text=get_message("fire_confirm"), reply_markup=kb_delete_confirm
     )
-    await FireMaster.confirm.set()
+    await FireMaster.confirm_selected.set()
 
 
-@dp.callback_query_handler(text_contains="cancel", state=FireMaster.confirm)
+@dp.callback_query_handler(text_contains="cancel", state=FireMaster.confirm_selected)
 async def cancel_master_deletion(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=1)
     await call.message.answer(
@@ -123,7 +123,7 @@ async def cancel_master_deletion(call: CallbackQuery, state: FSMContext):
     await state.finish()
 
 
-@dp.callback_query_handler(text_contains="confirm", state=FireMaster.confirm)
+@dp.callback_query_handler(text_contains="confirm", state=FireMaster.confirm_selected)
 async def delete_master(call: CallbackQuery, state: FSMContext):
     await call.answer(cache_time=1)
     data = await state.get_data()
@@ -140,12 +140,12 @@ async def delete_master(call: CallbackQuery, state: FSMContext):
         try:
             await bot.send_message(
                 chat_id=customer.chat_id,
-                text=get_message("fire_master_notification").format(master.name),
+                text=get_message("fire_notify_customer").format(master.name),
             )
         except ChatNotFound:
             logging.info(f"ChatNotFound: chat id - {customer.chat_id}")
             await call.message.answer(
-                text=get_message("fire_master_no_chat_id_alert").format(
+                text=get_message("alert_fire_no_master_chat_id").format(
                     customer.name, customer.phone
                 )
             )

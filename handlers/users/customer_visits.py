@@ -15,9 +15,9 @@ from tortoise.expressions import Q
 from tortoise.query_utils import Prefetch
 
 from data.messages import get_message
-from keyboards.default import kb_cancel_visit, kb_masters, kb_previous_visits
+from keyboards.default.kb_customer import kb_customer_commands, kb_previous_visits, kb_cancel_visit
 from loader import bot, dp
-from states import CancelVisit, CustomerVisits
+from states.customer_states import CustomerVisits, CancelVisit
 from utils.db_api.models import Customer, Master, Timeslot
 
 portfolio_photos_callback = CallbackData("Visit", "visit_pk", "master_pk")
@@ -59,7 +59,7 @@ async def customer_visits(message: Message, state: FSMContext = None):
                 )
             else:
                 await message.answer(
-                    text=get_message("no_upcoming_visits").format(
+                    text=get_message("alert_no_upcoming_visits").format(
                         get_message("archive")
                     ),
                     reply_markup=kb_previous_visits,
@@ -67,9 +67,9 @@ async def customer_visits(message: Message, state: FSMContext = None):
             await state.update_data(customer_pk=customer.pk)
             await CustomerVisits.visits.set()
         else:
-            await message.answer(text=get_message("no_visits"), reply_markup=kb_masters)
+            await message.answer(text=get_message("alert_no_visits"), reply_markup=kb_customer_commands)
     else:
-        await message.answer(text=get_message("no_visits"), reply_markup=kb_masters)
+        await message.answer(text=get_message("alert_no_visits"), reply_markup=kb_customer_commands)
 
 
 @dp.callback_query_handler(
@@ -106,30 +106,30 @@ async def visit_detail(call: CallbackQuery, callback_data: dict, state: FSMConte
         master_chat_id=master.chat_id,
         master_name=master.name,
     )
-    await CancelVisit.visit.set()
+    await CancelVisit.visit_selected.set()
 
 
-@dp.message_handler(text="Cancel visit", state=CancelVisit.visit)
+@dp.message_handler(text="Cancel visit", state=CancelVisit.visit_selected)
 async def visit_cancel(message: Message, state: FSMContext):
     data = await state.get_data()
     visit = await Timeslot.get(pk=data["visit_pk"])
     try:
         await bot.send_message(
             chat_id=data["master_chat_id"],
-            text=get_message("visit_cancel_notification").format(
+            text=get_message("visit_cancel_notify_master").format(
                 visit.datetime.strftime("%d.%m"), visit.datetime.strftime("%H:%M")
             ),
         )
     except ChatNotFound:
         logging.info(f'ChatNotFound: chat id - {data["master_chat_id"]}')
         await message.answer(
-            text=get_message("visit_cancel_no_master_chat_id_alert").format(
+            text=get_message("alert_visit_cancel_no_master_chat_id").format(
                 data["master_name"], str(os.getenv("PHONE_NUM"))
             )
         )
     await visit.delete()
     await message.answer(
-        text=get_message("visit_cancel_success"), reply_markup=kb_masters
+        text=get_message("visit_cancel_success"), reply_markup=kb_customer_commands
     )
     await state.finish()
 
@@ -156,10 +156,10 @@ async def archive_visits(message: Message, state: FSMContext):
                 visit.datetime.strftime("%d.%m"),
                 visit.datetime.strftime("%H:%M"),
             )
-        await message.answer(text=text, reply_markup=kb_masters)
+        await message.answer(text=text, reply_markup=kb_customer_commands)
     else:
         await message.answer(
-            text=get_message("no_previous_visits"),
-            reply_markup=kb_masters,
+            text=get_message("alert_no_previous_visits"),
+            reply_markup=kb_customer_commands,
         )
     await state.finish()

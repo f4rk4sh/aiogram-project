@@ -27,7 +27,7 @@ async def notify_customer():
                 for admin in ADMINS:
                     await bot.send_message(
                         chat_id=admin,
-                        text=get_message("reminder_no_chat_id_alert").format(
+                        text=get_message("alert_reminder_no_chat_id").format(
                             visit.customer.name, visit.customer.phone
                         ),
                     )

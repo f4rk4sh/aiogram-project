@@ -2,7 +2,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import Message
 
 from filters import IsAdmin
-from keyboards.inline import kb_statistics
+from keyboards.inline.kb_inline_admin import kb_statistics
 from loader import dp
 
 

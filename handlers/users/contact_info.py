@@ -4,7 +4,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import Message
 
 from data.messages import get_message
-from keyboards.default import kb_back
+from keyboards.default.kb_customer import kb_back
 from loader import dp
 
 

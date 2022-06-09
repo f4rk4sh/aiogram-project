@@ -5,7 +5,10 @@ from tortoise.expressions import Q
 
 from data.config import ADMINS
 from data.messages import get_message
-from keyboards.default import kb_admin_commands, kb_master_commands, kb_masters
+from keyboards.default.kb_admin import kb_admin_commands
+from keyboards.default.kb_customer import kb_customer_commands
+from keyboards.default.kb_master import kb_master_commands
+
 from loader import dp
 from utils.db_api.models import Master
 
@@ -27,8 +30,8 @@ async def command_start(message: Message, state: FSMContext = None):
         )
     else:
         await message.answer(
-            text=get_message("start_customer"),
-            reply_markup=kb_masters,
+            text=get_message("start"),
+            reply_markup=kb_customer_commands,
         )
 
 
@@ -41,7 +44,7 @@ async def command_menu(message: Message, state: FSMContext = None):
     elif await Master.filter(Q(chat_id=message.from_user.id) & Q(is_active=True)):
         await message.answer(text=get_message("menu"), reply_markup=kb_master_commands)
     else:
-        await message.answer(text=get_message("menu"), reply_markup=kb_masters)
+        await message.answer(text=get_message("menu"), reply_markup=kb_customer_commands)
 
 
 @dp.message_handler(Command("help"), state="*")
@@ -61,5 +64,5 @@ async def command_help(message: Message, state: FSMContext = None):
     else:
         await message.answer(
             text=get_message("help_customer"),
-            reply_markup=kb_masters,
+            reply_markup=kb_customer_commands,
         )
