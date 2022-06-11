@@ -7,7 +7,7 @@ MESSAGES = {
 
     'menu': "Main menu, choose one of the available commands 👇",
 
-    'help_admin': "<b>Available commands<b>\n\n"
+    'help_admin': "<b>Available commands</b>\n\n"
                   "<b>Send notifications:</b>\n\n"
                   "/inform - <em>send notification to masters and/or customers</em>\n\n"
                   "<b>Manage masters:</b>\n\n"
@@ -146,6 +146,9 @@ MESSAGES = {
     'set_info': "Enter master's info\n\n"
                 "<em>HINT: up to 200 characters</em>",
 
+    'alert_master_duplication': "<b>Alert:</b>\n\n"
+                                "Master with this phone number already exists. Try another phone number",
+
     'add_master_success': "<b>Notification:</b>\n\n"
                           "Master has been successfully added",
 
@@ -190,6 +193,8 @@ MESSAGES = {
 
     'alert_day_off_master': "This is your day off. Enjoy!",
 
+    'alert_make_day_off': "You can't make day off because you have upcoming visits this day",
+
     'make_day_off_success': "You have successfully made day off! Enjoy it",
 
     'cancel_booking_confirm': "Do you want to cancel booking?",
@@ -203,9 +208,9 @@ MESSAGES = {
 
     'master_visit_cancel_success': "Visit has been successfully canceled",
 
-    'customer_duplication_alert': "<b>Alert:</b>\n\n"
-                                  "Customer already has visit at this time!\n"
-                                  "Please, chose another timeslot",
+    'alert_customer_visit_duplication': "<b>Alert:</b>\n\n"
+                                        "Customer already has visit at this time!\n"
+                                        "Please, chose another timeslot",
 
     'set_customer_name': "Please enter customers name",
 
