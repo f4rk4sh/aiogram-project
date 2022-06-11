@@ -65,9 +65,13 @@ async def set_phone(message: Message, state: FSMContext):
 
 @dp.message_handler(regexp=r"\+380\d{9}", state=AddMaster.phone_typed)
 async def set_info(message: Message, state: FSMContext):
-    await state.update_data(phone=message.text)
-    await message.answer(text=get_message("set_info"))
-    await AddMaster.info_typed.set()
+    if await Master.get_or_none(phone=message.text):
+        await message.answer(get_message("alert_master_duplication"))
+        await AddMaster.phone_typed.set()
+    else:
+        await state.update_data(phone=message.text)
+        await message.answer(text=get_message("set_info"))
+        await AddMaster.info_typed.set()
 
 
 @dp.message_handler(regexp=r"^[^\/].{1,200}$", state=AddMaster.info_typed)

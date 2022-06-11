@@ -71,8 +71,8 @@ async def master_info(call: CallbackQuery, state: FSMContext):
     state=BookMaster.book_or_portfolio_selected,
 )
 async def set_day(message: Message, state: FSMContext):
-    gotten_sate = await state.get_state()
-    if gotten_sate.split(":")[1] != "book_or_portfolio_selected":
+    gotten_state = await state.get_state()
+    if gotten_state.split(":")[1] != "book_or_portfolio_selected":
         data = await state.get_data()
         list_keys = []
         for key in data:
@@ -94,7 +94,7 @@ async def set_day(message: Message, state: FSMContext):
         if await Timeslot.get_or_none(date=time_inc.date(), master=master):
             keyboard.add(
                 InlineKeyboardButton(
-                    text=f'❌ {time_inc.strftime("%A %d.%m")} ❌', callback_data="day_off"
+                    text=f'❌ {time_inc.strftime("%A %d.%m")} ❌', callback_data="rest"
                 )
             )
         else:
@@ -139,7 +139,7 @@ async def set_time(call: CallbackQuery, state: FSMContext):
         delta=timedelta(hours=1),
     ):
         if time_inc > datetime.now():
-            if await Timeslot.get_or_none(date=time_inc.date(), master=master):
+            if await Timeslot.get_or_none(datetime=time_inc, master=master):
                 time_slot.add(
                     InlineKeyboardButton(
                         text=f'❌ Since {time_inc.strftime("%H:%M")} ❌',
@@ -164,20 +164,10 @@ async def set_time(call: CallbackQuery, state: FSMContext):
     await call.message.edit_reply_markup(reply_markup=time_slot)
 
 
-@dp.callback_query_handler(text_contains="Back", state="*")
-async def back(call: CallbackQuery, state: FSMContext):
-    await call.answer(cache_time=1)
-    gotten_sate = await state.get_state()
-    if gotten_sate.split(":")[1] == "day_selected":
-        await set_master(call.message)
-    else:
-        await set_day(message=call.message, state=state)
-
-
 @dp.callback_query_handler(
     text_contains="week", state=BookMaster.day_selected
 )
-async def set_day(call: CallbackQuery, state: FSMContext):
+async def set_day_week(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     master = await Master.get(pk=data["master_pk"])
     try:
@@ -188,10 +178,17 @@ async def set_day(call: CallbackQuery, state: FSMContext):
         await call.answer(text=get_message("alert_past"), show_alert=True)
     elif call.data == "Previous week":
         keyboard = InlineKeyboardMarkup()
+        if abs(datetime.strptime(data["first_day"], "%y-%m-%d %H:%M:%S") - datetime.now()) < timedelta(days=7):
+            day = datetime.now().isoweekday()
+            num_d = 7 - day
+            start = datetime.now()
+            end = datetime.now() + timedelta(days=num_d)
+        else:
+            start = datetime.strptime(data["first_day"], "%y-%m-%d %H:%M:%S") - timedelta(days=6)
+            end = datetime.strptime(data["first_day"], "%y-%m-%d %H:%M:%S")
         async for time_inc in date_span(
-            start=datetime.strptime(data["first_day"], "%y-%m-%d %H:%M:%S")
-            - timedelta(days=6),
-            end=datetime.strptime(data["first_day"], "%y-%m-%d %H:%M:%S"),
+            start=start,
+            end=end,
             delta=timedelta(days=1),
         ):
             if time_inc > datetime.now() - timedelta(days=1):
@@ -199,7 +196,7 @@ async def set_day(call: CallbackQuery, state: FSMContext):
                     keyboard.add(
                         InlineKeyboardButton(
                             text=f'❌ {time_inc.strftime("%A %d.%m")} ❌',
-                            callback_data="day_off",
+                            callback_data="rest",
                         )
                     )
                 else:
@@ -241,7 +238,7 @@ async def set_day(call: CallbackQuery, state: FSMContext):
                 keyboard.add(
                     InlineKeyboardButton(
                         text=f'❌ {time_inc.strftime("%A %d.%m")} ❌',
-                        callback_data="day_off",
+                        callback_data="rest",
                     )
                 )
             else:
@@ -258,7 +255,7 @@ async def set_day(call: CallbackQuery, state: FSMContext):
         keyboard.add(
             InlineKeyboardButton(
                 text=f"Back to masters",
-                callback_data="Back to masters",
+                callback_data="back",
             )
         )
         last_day = datetime.strptime(data["last_day"], "%y-%m-%d %H:%M:%S") + timedelta(
@@ -270,8 +267,18 @@ async def set_day(call: CallbackQuery, state: FSMContext):
         await call.message.edit_reply_markup(reply_markup=keyboard)
 
 
+@dp.callback_query_handler(text_contains="back", state="*")
+async def back(call: CallbackQuery, state: FSMContext):
+    await call.answer(cache_time=1)
+    gotten_state = await state.get_state()
+    if gotten_state.split(":")[1] == "day_selected":
+        await set_master(call.message)
+    else:
+        await set_day(call.message, state)
+
+
 @dp.callback_query_handler(
-    text_contains="day_off", state=BookMaster.day_selected
+    text_contains="rest", state=BookMaster.day_selected
 )
 async def day_off(call: CallbackQuery, state: FSMContext):
     await call.answer(text=get_message("alert_day_off"), show_alert=True)
